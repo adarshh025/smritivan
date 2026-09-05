@@ -1,0 +1,20 @@
+# Copyright (c) 2026 Team laccha paratha (Adarsh A, Twinkle B, Kashish, Utkarsh, Pratibha, Akash).
+# All rights reserved.
+# SMRITIVAN (स्मृतिवन) - SIH 2026 Problem Statement ID: 26003
+# Cognitive Gaming & Memory Assistance Platform for Dementia Patients in NER.
+
+from sqlalchemy import Column, String, Integer
+from app.database import Base
+
+class CaregiverAlert(Base):
+    __tablename__ = "caregiver_alerts"
+
+    alert_id = Column(String(64), primary_key=True, index=True)
+    trigger_reason = Column(String(512), nullable=False)
+    urgency = Column(String(32), nullable=False) # 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
+    timestamp = Column(String(64), nullable=False, index=True)
+    
+    # CRDT Tracking
+    sync_status = Column(String(32), nullable=False, default="synced")
+    hlc_timestamp = Column(String(128), nullable=False, index=True)
+    is_deleted = Column(Integer, nullable=False, default=0)

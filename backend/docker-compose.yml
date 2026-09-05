@@ -1,0 +1,36 @@
+# Copyright (c) 2026 Team laccha paratha (Adarsh A, Twinkle B, Kashish, Utkarsh, Pratibha, Akash).
+# All rights reserved.
+# SMRITIVAN (स्मृतिवन) - SIH 2026 Problem Statement ID: 26003
+# Cognitive Gaming & Memory Assistance Platform for Dementia Patients in NER.
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: smritivan_postgres
+    environment:
+      POSTGRES_USER: smritivan_user
+      POSTGRES_PASSWORD: smritivan_secure_pass_2026
+      POSTGRES_DB: smritivan_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  api:
+    build: .
+    container_name: smritivan_fastapi
+    environment:
+      DATABASE_URL: postgresql+asyncpg://smritivan_user:smritivan_secure_pass_2026@postgres:5432/smritivan_db
+      BHASHINI_API_KEY: bhashini_ner_clinical_token_2026
+      SECRET_KEY: smritivan_super_secure_abha_key_2026_laccha_paratha
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

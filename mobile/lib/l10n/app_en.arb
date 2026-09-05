@@ -1,0 +1,102 @@
+{
+  "@@locale": "en",
+  "welcomeTitle": "A simple space for memory, daily routines and joyful activities.",
+  "startBtn": "Let's Begin",
+  "caregiverSetupBtn": "Caregiver Setup",
+  "languageQuestion": "Choose your language",
+  "english": "English",
+  "hindi": "हिंदी",
+  "assamese": "অসমীয়া",
+  "bengali": "বাংলা",
+  "regionQuestion": "Where are you from?",
+  
+  "goodAfternoon": "Good afternoon, {name}",
+  "@goodAfternoon": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "howAreYouFeeling": "How are you feeling today?",
+  "feelingGood": "Good",
+  "feelingOkay": "Okay",
+  "feelingNotGreat": "Not great",
+  "wellbeingSaved": "Well-being check-in saved!",
+  "cognitiveGames": "🧠 Cognitive Games",
+  "cognitiveGamesDesc": "Choose an activity to exercise your memory, attention and thinking.",
+  "todaysReminders": "⏰ Today's Reminders",
+  "noRemindersToday": "You have no reminders today.",
+  "viewAllReminders": "View All Reminders",
+  
+  "activityLabel": "🧠 Activity",
+  "remindersLabel": "⏰ Reminders",
+  "wellbeingLabel": "❤️ Wellbeing",
+  "totalSessionsLabel": "{count} total",
+  "@totalSessionsLabel": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "todayCountLabel": "{count} today",
+  "@todayCountLabel": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  
+  "play": "Play",
+  "difficulty": "Difficulty: {level}",
+  "@difficulty": {
+    "placeholders": {
+      "level": { "type": "String" }
+    }
+  },
+  "adaptive": "Adaptive",
+  
+  "gameMemoryMatch": "Memory Match",
+  "gameMemoryMatchDesc": "Memory & concentration",
+  "gamePictureRecall": "Picture Recall",
+  "gamePictureRecallDesc": "Memory & attention",
+  "gamePatternBuilder": "Pattern Builder",
+  "gamePatternBuilderDesc": "Reasoning & attention",
+  "gameWordGarden": "Word Garden",
+  "gameWordGardenDesc": "Language & vocabulary",
+  "gameCardRecall": "Card Recall",
+  "gameCardRecallDesc": "Short-term memory",
+  "gameDailyHelper": "Daily Helper",
+  "gameDailyHelperDesc": "Planning & sequencing",
+  
+  "markDone": "Mark Done",
+  "done": "Done",
+  
+  "patientOverview": "Patient Overview",
+  "totalActivities": "Total Activities",
+  "engagementScore": "Engagement Score",
+  "engagementScoreDesc": "Activity-based score derived from gameplay participation and performance.",
+  "remindersDone": "{percent}% Done",
+  "@remindersDone": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "activityInsights": "💡 Activity Insights",
+  "patientTimeline": "Patient Timeline",
+  "noActivities": "No activities recorded yet.",
+  "manageReminders": "Manage Reminders",
+  "addReminder": "Add Reminder",
+  "cognitiveAnalysis": "Cognitive Activity Analysis",
+  "notEnoughData": "Not enough activity data yet.",
+  "gameProgression": "Game Progression",
+  "gameHistory": "Game History",
+  "noGameHistory": "No games played yet.",
+  "currentLevel": "Current Level: {level}",
+  "@currentLevel": { "placeholders": { "level": { "type": "int" } } },
+  "highestLevel": "Highest Level: {level}",
+  "@highestLevel": { "placeholders": { "level": { "type": "int" } } },
+  "recentScore": "Recent Score: {score}",
+  "@recentScore": { "placeholders": { "score": { "type": "int" } } },
+  "trendStable": "Stable",
+  "trendImproving": "📈 Improving",
+  "trendNeedsPractice": "📉 Needs Practice"
+}
