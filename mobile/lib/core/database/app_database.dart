@@ -9,6 +9,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
@@ -57,48 +58,104 @@ class AppDatabase {
     }
   }
 
-  /// Initializes SQLCipher encrypted SQLite database
+  /// Performs a development-time health check on the database connection
+  Future<bool> healthCheck() async {
+    try {
+      final db = await database;
+      final result = await db.rawQuery('SELECT count(*) as count FROM ${DbTables.users}');
+      final count = Sqflite.firstIntValue(result) ?? 0;
+      debugPrint('[AppDatabase] Health Check SUCCESS: Database open, $count user(s) present.');
+      return true;
+    } catch (e) {
+      debugPrint('[AppDatabase] Health Check FAILED: $e');
+      return false;
+    }
+  }
+
+  /// Initializes SQLCipher encrypted SQLite database with resilient multi-passphrase fallback and recovery
   Future<Database> _initDatabase() async {
     final docsDir = await getApplicationDocumentsDirectory();
+    final dir = Directory(docsDir.path);
+    if (!dir.existsSync()) {
+      await dir.create(recursive: true);
+    }
     final dbPath = p.join(docsDir.path, _dbFileName);
 
     // Retrieve AES-256 key from hardware-backed keystore
-    final passphrase = await _encryptionService.getOrCreateDatabasePassphrase();
+    final primaryPassphrase = await _encryptionService.getOrCreateDatabasePassphrase();
 
+    try {
+      return await _openDatabaseWithPassphrase(dbPath, primaryPassphrase);
+    } catch (primaryErr) {
+      debugPrint('[AppDatabase] Primary key open failed: $primaryErr. Attempting resilient recovery...');
+
+      final dbFile = File(dbPath);
+      if (dbFile.existsSync()) {
+        // Attempt 1: Try fallback static passphrase
+        try {
+          final db = await _openDatabaseWithPassphrase(dbPath, EncryptionService.fallbackPassphrase);
+          // Seamlessly rekey to the primary passphrase
+          await db.execute("PRAGMA rekey = '$primaryPassphrase'");
+          debugPrint('[AppDatabase] Recovered database with fallback key and rekeyed to primary.');
+          return db;
+        } catch (_) {}
+
+        // Attempt 2: Try unencrypted open
+        try {
+          final db = await _openDatabaseWithPassphrase(dbPath, null);
+          // Seamlessly encrypt with the primary passphrase
+          await db.execute("PRAGMA rekey = '$primaryPassphrase'");
+          debugPrint('[AppDatabase] Encrypted existing unencrypted database with primary key.');
+          return db;
+        } catch (_) {}
+
+        // If file exists but is genuinely corrupted and unreadable by all keys:
+        // Safely preserve the corrupt database as a backup file before creating fresh seed
+        final backupPath = p.join(docsDir.path, 'smritivan_corrupt_${DateTime.now().millisecondsSinceEpoch}.db.bak');
+        try {
+          await dbFile.copy(backupPath);
+          await dbFile.delete();
+          debugPrint('[AppDatabase] Preserved corrupted DB to $backupPath and recreated fresh encrypted DB.');
+        } catch (copyErr) {
+          debugPrint('[AppDatabase] Could not backup corrupt file: $copyErr');
+        }
+      }
+
+      // Re-create clean encrypted database with default seed
+      return await _openDatabaseWithPassphrase(dbPath, primaryPassphrase);
+    }
+  }
+
+  Future<Database> _openDatabaseWithPassphrase(String dbPath, String? password) async {
     return await openDatabase(
       dbPath,
       version: _dbVersion,
-      password: passphrase,
+      password: password,
       onCreate: (db, version) async {
         await _createTables(db);
         await _seedInitialData(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        // Upgrade migration logic for future schema versions
         if (oldVersion < 2) {
           await db.execute('DROP TABLE IF EXISTS ${DbTables.caregiverAlerts}');
           await db.execute(DbTables.createCaregiverAlertsTable);
         }
         if (oldVersion < 3) {
-          // Add new Profile preference columns to users
-          await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN age INTEGER');
-          await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN phone TEXT');
-          await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN preferred_activity_time TEXT');
-          await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN notifications_enabled INTEGER NOT NULL DEFAULT 1');
-          await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN profile_photo_path TEXT');
+          try { await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN age INTEGER'); } catch (_) {}
+          try { await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN phone TEXT'); } catch (_) {}
+          try { await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN preferred_activity_time TEXT'); } catch (_) {}
+          try { await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN notifications_enabled INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+          try { await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN profile_photo_path TEXT'); } catch (_) {}
 
-          // Create Caregivers and Relationships tables
-          await db.execute(DbTables.createCaregiversTable);
-          await db.execute(DbTables.createRelationshipsTable);
+          try { await db.execute(DbTables.createCaregiversTable); } catch (_) {}
+          try { await db.execute(DbTables.createRelationshipsTable); } catch (_) {}
         }
         if (oldVersion < 4) {
-          await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN sound_effects_enabled INTEGER NOT NULL DEFAULT 1');
-          await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN voice_guidance_enabled INTEGER NOT NULL DEFAULT 1');
-          await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN haptic_feedback_enabled INTEGER NOT NULL DEFAULT 1');
+          try { await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN sound_effects_enabled INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+          try { await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN voice_guidance_enabled INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+          try { await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN haptic_feedback_enabled INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
         }
         if (oldVersion < 5) {
-          // Ensure all tables and columns from v3 and v4 exist
-          // This is a self-healing block for any databases that were created at version 4 but with v1/v2 schema
           try { await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN age INTEGER'); } catch (_) {}
           try { await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN phone TEXT'); } catch (_) {}
           try { await db.execute('ALTER TABLE ${DbTables.users} ADD COLUMN preferred_activity_time TEXT'); } catch (_) {}
@@ -149,6 +206,13 @@ class AppDatabase {
       'native_language': 'as',
       'dementia_stage': 'Early-Stage (Mild Cognitive Impairment)',
       'caregiver_id': 'caregiver_paratha_01',
+      'age': 68,
+      'phone': '+91 98765 43210',
+      'preferred_activity_time': 'Morning',
+      'notifications_enabled': 1,
+      'sound_effects_enabled': 1,
+      'voice_guidance_enabled': 1,
+      'haptic_feedback_enabled': 1,
       'created_at': nowIso,
       'updated_at': nowIso,
       DbTables.colHlcTimestamp: initialHlc,
@@ -370,4 +434,3 @@ class AppDatabase {
     }
   }
 }
-

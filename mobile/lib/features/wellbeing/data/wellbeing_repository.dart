@@ -4,7 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_tables.dart';
 import '../domain/wellbeing_model.dart';
-import '../../reminders/application/reminder_service.dart';
+import '../../../core/database/database_provider.dart';
 
 final wellbeingRepositoryProvider = Provider<WellbeingRepository>((ref) {
   final db = ref.watch(appDatabaseProvider);

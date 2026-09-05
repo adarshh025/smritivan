@@ -1,4 +1,11 @@
 // Copyright (c) 2026 Team laccha paratha (SIH 2026). All rights reserved.
+/*
+ * Copyright (c) 2026 Team laccha paratha (Adarsh A, Twinkle B, Kashish, Utkarsh, Pratibha, Akash).
+ * All rights reserved.
+ * SMRITIVAN (स्मृतिवन) - SIH 2026 Problem Statement ID: 26003
+ * Cognitive Gaming & Memory Assistance Platform for Dementia Patients in NER.
+ */
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,6 +24,8 @@ import '../../games/pattern_builder/pattern_builder_game.dart';
 import '../../games/word_garden/word_garden_game.dart';
 import '../../games/card_recall/card_recall_game.dart';
 import '../../games/daily_helper/daily_helper_game.dart';
+import '../../games/domain/game_session_model.dart';
+import '../../games/core/game_progression_service.dart';
 
 import '../../caregiver/presentation/caregiver_auth_view.dart';
 import '../../reminders/presentation/reminders_view.dart';
@@ -27,10 +36,6 @@ import '../../auth_profile/presentation/user_provider.dart';
 import '../../reminders/application/reminder_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../settings/presentation/patient_settings_view.dart';
-import '../../personalization/application/personalization_provider.dart';
-import '../../personalization/domain/personalization_models.dart';
-import '../../daily_plan/application/daily_plan_provider.dart';
-import '../../daily_plan/domain/daily_plan_model.dart';
 
 class ElderHomeView extends ConsumerStatefulWidget {
   const ElderHomeView({Key? key}) : super(key: key);
@@ -41,7 +46,8 @@ class ElderHomeView extends ConsumerStatefulWidget {
 
 class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
   String? _selectedWellbeing;
-  
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -49,16 +55,41 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
       ref.read(elderHomeProvider.notifier).loadData();
     });
   }
-  
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  String _getTimeGreeting(String name, int hour) {
+    if (hour >= 5 && hour < 12) {
+      return "Good Morning,\n$name 👋";
+    } else if (hour >= 12 && hour < 17) {
+      return "Good Afternoon,\n$name ☀️";
+    } else if (hour >= 17 && hour < 21) {
+      return "Good Evening,\n$name 🌄";
+    } else {
+      return "Restful Evening,\n$name 🌙";
+    }
+  }
+
+  bool _isEveningTime(int hour) {
+    return hour >= 17 || hour < 5;
+  }
+
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(elderHomeProvider);
-    final dailyPlanState = ref.watch(dailyPlanProvider);
-    final user = ref.watch(activeUserProvider).value;
+    final userState = ref.watch(activeUserProvider);
+    final user = userState.value;
     final l10n = AppLocalizations.of(context)!;
+    final currentHour = DateTime.now().hour;
+    final isEvening = _isEveningTime(currentHour);
+
     final activeMood = _selectedWellbeing ?? homeState.latestWellbeing?.status ?? 'good';
-    
-    if (homeState.isLoading) {
+
+    if (homeState.isLoading || userState.isLoading) {
       return const Scaffold(
         backgroundColor: AppColors.warmSand,
         body: AppLoadingState(),
@@ -75,147 +106,113 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: AppColors.deepSageGreen,
+        backgroundColor: isEvening ? const Color(0xFF2F3E46) : AppColors.deepSageGreen,
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.white, size: 28),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PatientSettingsView())),
+            tooltip: 'Settings',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PatientSettingsView()),
+            ).then((_) {
+              ref.read(activeUserProvider.notifier).loadActiveUser();
+              ref.read(elderHomeProvider.notifier).loadData();
+            }),
           ),
           IconButton(
             icon: const Icon(Icons.info_outline, color: Colors.white, size: 28),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutView())),
+            tooltip: 'About',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AboutView()),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.shield_outlined, color: Colors.white, size: 28),
             tooltip: 'Caregiver Mode',
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CaregiverAuthView())),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CaregiverAuthView()),
+            ).then((_) {
+              ref.read(elderHomeProvider.notifier).loadData();
+            }),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildGreetingHeader(user, l10n, activeMood),
-            _buildOverviewPanel(homeState, l10n),
-            
-            if (!dailyPlanState.isLoading && dailyPlanState.items.isNotEmpty)
-              _buildTodaysPlan(context, dailyPlanState, l10n),
-            
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-              child: Text(
-                l10n.cognitiveGames,
-                style: AppTypography.titleLarge,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: Text(
-                l10n.cognitiveGamesDesc,
-                style: AppTypography.bodyMedium,
-              ),
-            ),
-            
-            _buildResponsiveGamesGrid(l10n),
-
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 40, 24, 16),
-              child: Text(
-                l10n.todaysReminders,
-                style: AppTypography.titleLarge,
-              ),
-            ),
-            
-            _buildInlineReminders(context, homeState, l10n),
-
-            const SizedBox(height: 80),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGreetingHeader(dynamic user, AppLocalizations l10n, String activeMood) {
-    String name = user?.name ?? "Guest";
-    if (name.contains(" ")) name = name.split(" ")[0];
-    final userId = user?.id ?? 'patient_ner_001';
-
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.softSageGreen, AppColors.deepSageGreen],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
-      ),
-      child: SafeArea(
+      body: SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 32.0),
+        child: SingleChildScrollView(
+          controller: _scrollController,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                l10n.goodAfternoon(name),
-                style: AppTypography.displayLarge.copyWith(color: Colors.white),
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: () {
-                  if (user != null) {
-                    final updated = user.copyWith(
-                      soundEffectsEnabled: !user.soundEffectsEnabled,
-                      voiceGuidanceEnabled: !user.soundEffectsEnabled
-                    );
-                    ref.read(activeUserProvider.notifier).updateUser(updated);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        user?.soundEffectsEnabled == true ? Icons.volume_up : Icons.volume_off, 
-                        color: Colors.white,
+              // 1. Time-Aware & Sundowning-Aware Header
+              _buildGreetingHeader(user, l10n, activeMood, currentHour, isEvening),
+
+              // 2. Today's Honest Summary / Progress Bar
+              _buildOverviewPanel(homeState, l10n),
+
+              // 3. Today's Focused / Suggested Cognitive Activity
+              _buildSuggestedActivityCard(context, user?.id ?? 'patient_ner_001', l10n),
+
+              // 4. Today's Reminders Section
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      l10n.todaysReminders,
+                      style: AppTypography.titleLarge.copyWith(
+                        color: AppColors.textCharcoal,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        user?.soundEffectsEnabled == true ? "Audio ON" : "Audio OFF",
-                        style: AppTypography.buttonLabel.copyWith(color: Colors.white, fontSize: 16),
-                      )
-                    ],
+                    ),
+                    TextButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const RemindersView()),
+                      ).then((_) {
+                        ref.read(elderHomeProvider.notifier).loadData();
+                      }),
+                      icon: const Icon(Icons.add_circle_outline, size: 20, color: AppColors.deepSageGreen),
+                      label: const Text(
+                        "Manage",
+                        style: TextStyle(
+                          color: AppColors.deepSageGreen,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _buildInlineReminders(context, homeState, l10n),
+
+              // 5. Cognitive Games Section
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 8),
+                child: Text(
+                  l10n.cognitiveGames,
+                  style: AppTypography.titleLarge.copyWith(
+                    color: AppColors.textCharcoal,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-              Text(
-                l10n.howAreYouFeeling,
-                style: AppTypography.bodyLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                child: Text(
+                  l10n.cognitiveGamesDesc,
+                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                ),
               ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(child: _buildWellbeingBtn('good', '😊', l10n.feelingGood, userId, activeMood, l10n)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _buildWellbeingBtn('okay', '🙂', l10n.feelingOkay, userId, activeMood, l10n)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _buildWellbeingBtn('not_great', '😐', l10n.feelingNotGreat, userId, activeMood, l10n)),
-                ],
-              ),
+              _buildResponsiveGamesGrid(l10n),
+
+              const SizedBox(height: 60),
             ],
           ),
         ),
@@ -223,7 +220,145 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
     );
   }
 
-  Widget _buildWellbeingBtn(String id, String emoji, String label, String userId, String activeMood, AppLocalizations l10n) {
+  Widget _buildGreetingHeader(
+    dynamic user,
+    AppLocalizations l10n,
+    String activeMood,
+    int hour,
+    bool isEvening,
+  ) {
+    String fullName = user?.name ?? "Bhaben Bora";
+    String displayName = fullName.split(" ").first;
+    final userId = user?.id ?? 'patient_ner_001';
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isEvening
+              ? const [Color(0xFF52796F), Color(0xFF2F3E46)]
+              : const [AppColors.softSageGreen, AppColors.deepSageGreen],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 28.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Time-Aware Greeting
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    _getTimeGreeting(displayName, hour),
+                    style: AppTypography.displayLarge.copyWith(
+                      color: Colors.white,
+                      fontSize: 28,
+                      height: 1.25,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                // Audio Guidance Quick Toggle
+                InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () async {
+                    if (user != null) {
+                      final updated = user.copyWith(
+                        soundEffectsEnabled: !user.soundEffectsEnabled,
+                        voiceGuidanceEnabled: !user.soundEffectsEnabled,
+                      );
+                      await ref.read(activeUserProvider.notifier).updateUser(updated);
+                      ref.read(elderHomeProvider.notifier).loadData();
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.22),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withOpacity(0.35)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          user?.soundEffectsEnabled == true ? Icons.volume_up : Icons.volume_off,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          user?.soundEffectsEnabled == true ? "Audio ON" : "Audio OFF",
+                          style: AppTypography.buttonLabel.copyWith(color: Colors.white, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              isEvening
+                  ? "Take a calm moment. Relax and rest your mind."
+                  : "Let's take today one gentle step at a time.",
+              style: AppTypography.bodyMedium.copyWith(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 22),
+
+            // How Are You Feeling Check-in
+            Text(
+              l10n.howAreYouFeeling,
+              style: AppTypography.bodyLarge.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(child: _buildWellbeingBtn('good', '😊', l10n.feelingGood, userId, activeMood, l10n)),
+                const SizedBox(width: 10),
+                Expanded(child: _buildWellbeingBtn('okay', '🙂', l10n.feelingOkay, userId, activeMood, l10n)),
+                const SizedBox(width: 10),
+                Expanded(child: _buildWellbeingBtn('not_great', '😐', l10n.feelingNotGreat, userId, activeMood, l10n)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWellbeingBtn(
+    String id,
+    String emoji,
+    String label,
+    String userId,
+    String activeMood,
+    AppLocalizations l10n,
+  ) {
     final bool isSelected = activeMood == id;
     return Material(
       color: Colors.transparent,
@@ -240,13 +375,14 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
                 content: Text("✓ ${l10n.wellbeingSaved}"),
                 duration: const Duration(seconds: 2),
                 behavior: SnackBarBehavior.floating,
+                backgroundColor: AppColors.deepSageGreen,
               ),
             );
           }
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
           decoration: BoxDecoration(
             color: isSelected ? Colors.white : Colors.white.withOpacity(0.18),
             borderRadius: BorderRadius.circular(16),
@@ -287,16 +423,16 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
                     ),
                 ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
-                label, 
+                label,
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTypography.bodyMedium.copyWith(
                   color: isSelected ? AppColors.deepSageGreen : Colors.white,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                  fontSize: 12,
+                  fontSize: 13,
                 ),
               ),
             ],
@@ -308,10 +444,15 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
 
   Widget _buildOverviewPanel(ElderHomeState state, AppLocalizations l10n) {
     final totalSessions = state.gameStats['total_sessions'] ?? 0;
+    final totalReminders = state.reminders.length;
+    final doneReminders = state.reminders.where((r) => r.status == 'done').length;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: AppCard(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        backgroundColor: Colors.white,
+        borderColor: AppColors.paleParchment,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -319,29 +460,35 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
                 onTap: () {
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("🎮 $totalSessions cognitive activities completed! Choose any game below to play."),
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                    ),
+                  _scrollController.animateTo(
+                    450,
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOut,
                   );
                 },
-                child: _buildOverviewStat(l10n.activityLabel, l10n.totalSessionsLabel(totalSessions)),
+                child: _buildOverviewStat(
+                  l10n.activityLabel,
+                  "$totalSessions done",
+                ),
               ),
             ),
-            Container(width: 1, height: 40, color: AppColors.paleParchment),
+            Container(width: 1, height: 44, color: AppColors.paleParchment),
             Expanded(
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
                 onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const RemindersView()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RemindersView()),
+                  ).then((_) => ref.read(elderHomeProvider.notifier).loadData());
                 },
-                child: _buildOverviewStat(l10n.remindersLabel, l10n.todayCountLabel(state.reminders.length)),
+                child: _buildOverviewStat(
+                  l10n.remindersLabel,
+                  "$doneReminders / $totalReminders",
+                ),
               ),
             ),
-            Container(width: 1, height: 40, color: AppColors.paleParchment),
+            Container(width: 1, height: 44, color: AppColors.paleParchment),
             Expanded(
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
@@ -349,13 +496,19 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
                   ScaffoldMessenger.of(context).hideCurrentSnackBar();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text("❤️ Well-being: ${state.latestWellbeing?.status.toUpperCase() ?? 'Not logged yet'}. Tap the face icons above anytime to update!"),
+                      content: Text(
+                        "❤️ Today's mood: ${state.latestWellbeing?.status.toUpperCase() ?? 'Good'}. Tap the smileys above to update anytime.",
+                      ),
                       duration: const Duration(seconds: 2),
                       behavior: SnackBarBehavior.floating,
+                      backgroundColor: AppColors.deepSageGreen,
                     ),
                   );
                 },
-                child: _buildOverviewStat(l10n.wellbeingLabel, state.latestWellbeing?.status.toUpperCase() ?? 'NONE'),
+                child: _buildOverviewStat(
+                  l10n.wellbeingLabel,
+                  state.latestWellbeing?.status.toUpperCase() ?? 'GOOD',
+                ),
               ),
             ),
           ],
@@ -368,169 +521,159 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: AppTypography.metricLabel, textAlign: TextAlign.center),
-        const SizedBox(height: 8),
-        Text(value, style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.deepSageGreen), textAlign: TextAlign.center),
+        Text(
+          label,
+          style: AppTypography.metricLabel.copyWith(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: AppTypography.titleMedium.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.deepSageGreen,
+            fontSize: 16,
+          ),
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }
 
-  Widget _buildTodaysPlan(BuildContext context, DailyPlanState state, AppLocalizations l10n) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.eco, color: AppColors.successSage, size: 28),
-              const SizedBox(width: 8),
-              Text("🌱 Today's Plan", style: AppTypography.titleLarge.copyWith(color: AppColors.deepSageGreen)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...state.items.map((item) => _buildPlanItemNode(context, item)).toList(),
-        ],
-      ),
-    );
-  }
+  Widget _buildSuggestedActivityCard(BuildContext context, String userId, AppLocalizations l10n) {
+    final progressionService = ref.watch(gameProgressionProvider);
 
-  Widget _buildPlanItemNode(BuildContext context, DailyPlanItem item) {
-    String timeStr = "";
-    if (item.scheduledTime.hour < 12) timeStr += "☀️ Morning";
-    else if (item.scheduledTime.hour < 17) timeStr += "🌤️ Afternoon";
-    else timeStr += "🧩 Evening";
+    return FutureBuilder<double>(
+      future: progressionService.getRecommendedLevel(userId, 'memory_match'),
+      builder: (context, snapshot) {
+        final currentLevel = snapshot.data ?? 1.0;
 
-    timeStr += "\n${item.scheduledTime.hour > 12 ? item.scheduledTime.hour - 12 : item.scheduledTime.hour}:${item.scheduledTime.minute.toString().padLeft(2, '0')} ${item.scheduledTime.hour >= 12 ? 'PM' : 'AM'}";
-
-    bool isCompleted = item.status == PlanItemStatus.completed;
-    bool isSkipped = item.status == PlanItemStatus.skipped;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 24.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(timeStr, style: AppTypography.bodyMedium.copyWith(fontSize: 14)),
-          ),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            width: 2,
-            height: item.type == PlanItemType.game && !isCompleted && !isSkipped ? 160 : 70,
-            color: AppColors.paleParchment,
-          ),
-          Expanded(
-            child: Opacity(
-              opacity: isSkipped ? 0.5 : 1.0,
-              child: AppCard(
-                padding: const EdgeInsets.all(16),
-                backgroundColor: isCompleted ? AppColors.successSage.withOpacity(0.1) : AppColors.cardSurface,
-                borderColor: isCompleted ? AppColors.successSage : AppColors.paleParchment,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+          child: AppCard(
+            padding: const EdgeInsets.all(20.0),
+            backgroundColor: const Color(0xFFFAF7F0),
+            borderColor: AppColors.softSageGreen.withOpacity(0.5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            "${item.type == PlanItemType.reminder ? '⏰ ' : (item.type == PlanItemType.wellbeing ? '❤️ ' : '')}${item.title}",
-                            style: AppTypography.titleMedium,
-                          ),
-                        ),
-                        if (isCompleted)
-                          Text("✓ Done", style: AppTypography.buttonLabel.copyWith(color: AppColors.successSage))
-                        else if (isSkipped)
-                          Text("Skipped", style: AppTypography.buttonLabel.copyWith(color: AppColors.textMuted))
-                        else if (item.status == PlanItemStatus.missed)
-                          Text("Missed", style: AppTypography.buttonLabel.copyWith(color: AppColors.warmTerracotta))
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(item.subtitle, style: AppTypography.bodyMedium),
-                    
-                    if (item.type == PlanItemType.game && !isCompleted && !isSkipped) ...[
-                      const SizedBox(height: 16),
-                      AppButton.primary(
-                        text: "Start",
-                        icon: Icons.play_arrow,
-                        onPressed: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => LevelSelectionView(
-                            gameType: item.associatedGameType!,
-                            gameTitle: CognitiveDomains.getGameName(item.associatedGameType!),
-                            gameIcon: _getIconForGame(item.associatedGameType!),
-                            gameColor: _getColorForGame(item.associatedGameType!),
-                            gameBuilder: (level) => _buildGameScreen(item.associatedGameType!, item.gameLevel ?? level),
-                          ))).then((_) {
-                            ref.read(dailyPlanProvider.notifier).loadPlan();
-                          });
-                        },
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE9C46A).withAlpha(50),
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(height: 8),
-                      Row(
+                      child: const Text('🧠', style: TextStyle(fontSize: 28)),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: AppButton.secondary(
-                              text: "Skip",
-                              onPressed: () => ref.read(dailyPlanProvider.notifier).skipActivity(item.associatedGameType!),
+                          Text(
+                            "Today's Suggested Game",
+                            style: AppTypography.metricLabel.copyWith(
+                              color: AppColors.deepSageGreen,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: AppButton.secondary(
-                              text: "Change",
-                              onPressed: () => ref.read(dailyPlanProvider.notifier).changeActivity(item.associatedGameType!),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Memory Match",
+                            style: AppTypography.titleMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 19,
                             ),
                           ),
                         ],
-                      )
-                    ]
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.deepSageGreen.withAlpha(25),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        "Level ${currentLevel.toInt()}",
+                        style: const TextStyle(
+                          color: AppColors.deepSageGreen,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 12),
+                Text(
+                  "Gentle concentration & card matching designed with cultural North-Eastern motifs.",
+                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: AppButton.primary(
+                        text: "Play Activity",
+                        icon: Icons.play_arrow,
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => LevelSelectionView(
+                                gameType: 'memory_match',
+                                gameTitle: 'Memory Match',
+                                gameIcon: '🧠',
+                                gameColor: const Color(0xFFE9C46A),
+                                gameBuilder: (level) => MemoryMatchGame(currentDifficulty: level),
+                              ),
+                            ),
+                          ).then((_) {
+                            ref.read(elderHomeProvider.notifier).loadData();
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.deepSageGreen,
+                          side: const BorderSide(color: AppColors.deepSageGreen),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: () {
+                          _scrollController.animateTo(
+                            600,
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeInOut,
+                          );
+                        },
+                        child: const Text(
+                          "More Games",
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
-  }
-
-  String _getIconForGame(String type) {
-    switch(type) {
-      case 'memory_match': return '🧠';
-      case 'picture_recall': return '🖼️';
-      case 'pattern_builder': return '🧩';
-      case 'word_garden': return '🔤';
-      case 'card_recall': return '🃏';
-      case 'daily_helper': return '🛒';
-      default: return '🧠';
-    }
-  }
-
-  Color _getColorForGame(String type) {
-    switch(type) {
-      case 'memory_match': return const Color(0xFFE9C46A);
-      case 'picture_recall': return const Color(0xFFF4A261);
-      case 'pattern_builder': return const Color(0xFFE76F51);
-      case 'word_garden': return const Color(0xFF2A9D8F);
-      case 'card_recall': return const Color(0xFF264653);
-      case 'daily_helper': return const Color(0xFF84A98C);
-      default: return AppColors.softSageGreen;
-    }
-  }
-
-  Widget _buildGameScreen(String type, double level) {
-    switch(type) {
-      case 'memory_match': return MemoryMatchGame(currentDifficulty: level);
-      case 'picture_recall': return PictureRecallGame(currentDifficulty: level);
-      case 'pattern_builder': return PatternBuilderGame(currentDifficulty: level);
-      case 'word_garden': return WordGardenGame(currentDifficulty: level);
-      case 'card_recall': return CardRecallGame(currentDifficulty: level);
-      case 'daily_helper': return DailyHelperGame(currentDifficulty: level);
-      default: return MemoryMatchGame(currentDifficulty: level);
-    }
   }
 
   Widget _buildResponsiveGamesGrid(AppLocalizations l10n) {
@@ -546,13 +689,18 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
               difficultyLabel: l10n.adaptive,
               themeColor: const Color(0xFFE9C46A),
               playLabel: l10n.play,
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LevelSelectionView(
-                gameType: 'memory_match',
-                gameTitle: l10n.gameMemoryMatch,
-                gameIcon: '🧠',
-                gameColor: const Color(0xFFE9C46A),
-                gameBuilder: (level) => MemoryMatchGame(currentDifficulty: level),
-              ))),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LevelSelectionView(
+                    gameType: 'memory_match',
+                    gameTitle: l10n.gameMemoryMatch,
+                    gameIcon: '🧠',
+                    gameColor: const Color(0xFFE9C46A),
+                    gameBuilder: (level) => MemoryMatchGame(currentDifficulty: level),
+                  ),
+                ),
+              ).then((_) => ref.read(elderHomeProvider.notifier).loadData()),
             ),
             GameCard(
               title: l10n.gamePictureRecall,
@@ -561,13 +709,18 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
               difficultyLabel: l10n.adaptive,
               themeColor: const Color(0xFFF4A261),
               playLabel: l10n.play,
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LevelSelectionView(
-                gameType: 'picture_recall',
-                gameTitle: l10n.gamePictureRecall,
-                gameIcon: '🖼️',
-                gameColor: const Color(0xFFF4A261),
-                gameBuilder: (level) => PictureRecallGame(currentDifficulty: level),
-              ))),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LevelSelectionView(
+                    gameType: 'picture_recall',
+                    gameTitle: l10n.gamePictureRecall,
+                    gameIcon: '🖼️',
+                    gameColor: const Color(0xFFF4A261),
+                    gameBuilder: (level) => PictureRecallGame(currentDifficulty: level),
+                  ),
+                ),
+              ).then((_) => ref.read(elderHomeProvider.notifier).loadData()),
             ),
             GameCard(
               title: l10n.gamePatternBuilder,
@@ -576,13 +729,18 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
               difficultyLabel: l10n.adaptive,
               themeColor: const Color(0xFFE76F51),
               playLabel: l10n.play,
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LevelSelectionView(
-                gameType: 'pattern_builder',
-                gameTitle: l10n.gamePatternBuilder,
-                gameIcon: '🧩',
-                gameColor: const Color(0xFFE76F51),
-                gameBuilder: (level) => PatternBuilderGame(currentDifficulty: level),
-              ))),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LevelSelectionView(
+                    gameType: 'pattern_builder',
+                    gameTitle: l10n.gamePatternBuilder,
+                    gameIcon: '🧩',
+                    gameColor: const Color(0xFFE76F51),
+                    gameBuilder: (level) => PatternBuilderGame(currentDifficulty: level),
+                  ),
+                ),
+              ).then((_) => ref.read(elderHomeProvider.notifier).loadData()),
             ),
             GameCard(
               title: l10n.gameWordGarden,
@@ -591,13 +749,18 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
               difficultyLabel: l10n.adaptive,
               themeColor: const Color(0xFF2A9D8F),
               playLabel: l10n.play,
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LevelSelectionView(
-                gameType: 'word_garden',
-                gameTitle: l10n.gameWordGarden,
-                gameIcon: '🔤',
-                gameColor: const Color(0xFF2A9D8F),
-                gameBuilder: (level) => WordGardenGame(currentDifficulty: level),
-              ))),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LevelSelectionView(
+                    gameType: 'word_garden',
+                    gameTitle: l10n.gameWordGarden,
+                    gameIcon: '🔤',
+                    gameColor: const Color(0xFF2A9D8F),
+                    gameBuilder: (level) => WordGardenGame(currentDifficulty: level),
+                  ),
+                ),
+              ).then((_) => ref.read(elderHomeProvider.notifier).loadData()),
             ),
             GameCard(
               title: l10n.gameCardRecall,
@@ -606,13 +769,18 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
               difficultyLabel: l10n.adaptive,
               themeColor: const Color(0xFF264653),
               playLabel: l10n.play,
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LevelSelectionView(
-                gameType: 'card_recall',
-                gameTitle: l10n.gameCardRecall,
-                gameIcon: '🃏',
-                gameColor: const Color(0xFF264653),
-                gameBuilder: (level) => CardRecallGame(currentDifficulty: level),
-              ))),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LevelSelectionView(
+                    gameType: 'card_recall',
+                    gameTitle: l10n.gameCardRecall,
+                    gameIcon: '🃏',
+                    gameColor: const Color(0xFF264653),
+                    gameBuilder: (level) => CardRecallGame(currentDifficulty: level),
+                  ),
+                ),
+              ).then((_) => ref.read(elderHomeProvider.notifier).loadData()),
             ),
             GameCard(
               title: l10n.gameDailyHelper,
@@ -621,13 +789,18 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
               difficultyLabel: l10n.adaptive,
               themeColor: const Color(0xFF84A98C),
               playLabel: l10n.play,
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LevelSelectionView(
-                gameType: 'daily_helper',
-                gameTitle: l10n.gameDailyHelper,
-                gameIcon: '🛒',
-                gameColor: const Color(0xFF84A98C),
-                gameBuilder: (level) => DailyHelperGame(currentDifficulty: level),
-              ))),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LevelSelectionView(
+                    gameType: 'daily_helper',
+                    gameTitle: l10n.gameDailyHelper,
+                    gameIcon: '🛒',
+                    gameColor: const Color(0xFF84A98C),
+                    gameBuilder: (level) => DailyHelperGame(currentDifficulty: level),
+                  ),
+                ),
+              ).then((_) => ref.read(elderHomeProvider.notifier).loadData()),
             ),
           ];
 
@@ -635,15 +808,13 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
             spacing: 16.0,
             runSpacing: 16.0,
             children: games.map((game) => SizedBox(
-              width: constraints.maxWidth >= 1024 
-                  ? (constraints.maxWidth - 32) / 3 
-                  : constraints.maxWidth >= 768 
-                      ? (constraints.maxWidth - 16) / 2 
-                      : constraints.maxWidth,
-              child: IntrinsicHeight(child: game),
+              width: constraints.maxWidth >= 768
+                  ? (constraints.maxWidth - 16) / 2
+                  : constraints.maxWidth,
+              child: game,
             )).toList(),
           );
-        }
+        },
       ),
     );
   }
@@ -651,7 +822,7 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
   Widget _buildInlineReminders(BuildContext context, ElderHomeState state, AppLocalizations l10n) {
     if (state.reminders.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
         child: AppEmptyState(message: l10n.noRemindersToday),
       );
     }
@@ -661,7 +832,7 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
       child: Column(
         children: [
           ...state.reminders.map((r) {
-            final isDone = r.status == 'done';
+            final isDone = r.status == 'done' || r.status == 'acknowledged';
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
               child: ReminderCard(
@@ -672,23 +843,13 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
                 isDone: isDone,
                 doneLabel: l10n.done,
                 markDoneLabel: l10n.markDone,
-                onMarkDone: () {
-                  ref.read(remindersProvider.notifier).markAsDone(r.id);
-                  ref.read(elderHomeProvider.notifier).loadData();
+                onMarkDone: () async {
+                  await ref.read(remindersProvider.notifier).markAsDone(r.id);
+                  await ref.read(elderHomeProvider.notifier).loadData();
                 },
               ),
             );
           }).toList(),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16.0),
-              child: AppButton.text(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RemindersView())),
-                icon: Icons.list,
-                text: l10n.viewAllReminders,
-              ),
-            ),
-          ),
         ],
       ),
     );

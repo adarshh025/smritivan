@@ -1,21 +1,14 @@
 // Copyright (c) 2026 Team laccha paratha (SIH 2026). All rights reserved.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import '../../../core/database/app_database.dart';
+import '../../../core/database/database_provider.dart';
 import '../data/reminder_repository.dart';
 import '../domain/reminder_model.dart';
+import '../presentation/reminder_provider.dart';
 import '../../auth_profile/presentation/user_provider.dart';
 
-// Provides the Secure SQLCipher Database
-final appDatabaseProvider = Provider<AppDatabase>((ref) {
-  return AppDatabase();
-});
-
-// Provides the Repository
-final reminderRepositoryProvider = Provider<ReminderRepository>((ref) {
-  final db = ref.watch(appDatabaseProvider);
-  return ReminderRepository(db);
-});
+// Re-export reminderRepositoryProvider from presentation/reminder_provider.dart for backwards compatibility
+export '../presentation/reminder_provider.dart' show reminderRepositoryProvider;
 
 class ReminderService {
   final ReminderRepository _repo;
@@ -27,11 +20,12 @@ class ReminderService {
     return _repo.getRemindersForUser(userId);
   }
 
-  Future<void> addReminder(String userId, String title, String time, String type, {String priority = 'normal'}) async {
+  Future<void> addReminder(String userId, String title, String time, String type, {String priority = 'normal', String? description}) async {
     final newReminder = ReminderModel(
       id: _uuid.v4(),
       userId: userId,
       title: title,
+      description: description,
       type: type,
       time: time,
       priority: priority,
@@ -120,7 +114,6 @@ class RemindersNotifier extends StateNotifier<AsyncValue<List<ReminderModel>>> {
     await loadReminders();
   }
 }
-
 
 // The main provider the UI listens to. Defaulting to 'patient_ner_001' for hackathon MVP.
 final remindersProvider = StateNotifierProvider<RemindersNotifier, AsyncValue<List<ReminderModel>>>((ref) {

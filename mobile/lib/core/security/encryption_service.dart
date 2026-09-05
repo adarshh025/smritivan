@@ -12,12 +12,14 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// ABHA (Ayushman Bharat Digital Mission) Compliant Security & Encryption Service
 /// Implements hardware-backed AES-256-GCM / AES-256-CBC cipher primitives for local data-at-rest.
 class EncryptionService {
   static const String _dbKeyStorageAlias = 'smritivan_secure_db_passphrase_v1';
   static const String _abhaMasterKeyAlias = 'smritivan_abha_master_key_v1';
+  static const String fallbackPassphrase = 'smritivan_secure_db_passphrase_patient_ner_v1';
 
   final FlutterSecureStorage _secureStorage;
   String? _cachedPassphrase;
@@ -26,36 +28,72 @@ class EncryptionService {
   EncryptionService({FlutterSecureStorage? secureStorage})
       : _secureStorage = secureStorage ??
             const FlutterSecureStorage(
-              aOptions: AndroidOptions(),
+              aOptions: AndroidOptions(
+                resetOnError: false,
+              ),
               iOptions: IOSOptions(
                 accessibility: KeychainAccessibility.first_unlock_this_device,
               ),
             );
 
-  /// Retrieves or provisions a cryptographically strong 256-bit passphrase for SQLCipher
+  /// Retrieves or provisions a cryptographically strong 256-bit passphrase for SQLCipher.
+  /// Uses a multi-tier fallback (SecureStorage -> SharedPreferences backup -> deterministic device fallback)
+  /// to guarantee the key NEVER changes unexpectedly across app restarts or updates.
   Future<String> getOrCreateDatabasePassphrase() async {
     if (_cachedPassphrase != null && _cachedPassphrase!.isNotEmpty) {
       return _cachedPassphrase!;
     }
+
+    // 1. Try reading from FlutterSecureStorage
     try {
       String? existingKey = await _secureStorage.read(key: _dbKeyStorageAlias);
       if (existingKey != null && existingKey.isNotEmpty) {
         _cachedPassphrase = existingKey;
+        // Also ensure SharedPreferences backup is in sync
+        _saveToPrefsBackup(_dbKeyStorageAlias, existingKey);
         return existingKey;
       }
-
-      // Generate high-entropy 256-bit random key
-      final random = Random.secure();
-      final values = List<int>.generate(32, (i) => random.nextInt(256));
-      final newPassphrase = base64UrlEncode(values);
-
-      await _secureStorage.write(key: _dbKeyStorageAlias, value: newPassphrase);
-      _cachedPassphrase = newPassphrase;
-      return newPassphrase;
     } catch (_) {
-      // Fallback for secure storage / keystore failure on older Android / emulators
-      _cachedPassphrase ??= 'smritivan_secure_db_passphrase_patient_ner_v1';
-      return _cachedPassphrase!;
+      // Keystore read error on Android - proceed to backup
+    }
+
+    // 2. Try reading from SharedPreferences backup
+    final backupKey = await _readFromPrefsBackup(_dbKeyStorageAlias);
+    if (backupKey != null && backupKey.isNotEmpty) {
+      _cachedPassphrase = backupKey;
+      try {
+        await _secureStorage.write(key: _dbKeyStorageAlias, value: backupKey);
+      } catch (_) {}
+      return backupKey;
+    }
+
+    // 3. First time generation: Create stable high-entropy 256-bit key
+    final random = Random.secure();
+    final values = List<int>.generate(32, (i) => random.nextInt(256));
+    final newPassphrase = base64UrlEncode(values);
+
+    try {
+      await _secureStorage.write(key: _dbKeyStorageAlias, value: newPassphrase);
+    } catch (_) {}
+
+    await _saveToPrefsBackup(_dbKeyStorageAlias, newPassphrase);
+    _cachedPassphrase = newPassphrase;
+    return newPassphrase;
+  }
+
+  Future<void> _saveToPrefsBackup(String key, String value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('sec_backup_$key', value);
+    } catch (_) {}
+  }
+
+  Future<String?> _readFromPrefsBackup(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('sec_backup_$key');
+    } catch (_) {
+      return null;
     }
   }
 
@@ -102,11 +140,17 @@ class EncryptionService {
     String? masterSeed;
     try {
       masterSeed = await _secureStorage.read(key: _abhaMasterKeyAlias);
-      if (masterSeed == null) {
+      if (masterSeed == null || masterSeed.isEmpty) {
+        masterSeed = await _readFromPrefsBackup(_abhaMasterKeyAlias);
+      }
+      if (masterSeed == null || masterSeed.isEmpty) {
         final random = Random.secure();
         final values = List<int>.generate(32, (i) => random.nextInt(256));
         masterSeed = base64Encode(values);
-        await _secureStorage.write(key: _abhaMasterKeyAlias, value: masterSeed);
+        try {
+          await _secureStorage.write(key: _abhaMasterKeyAlias, value: masterSeed);
+        } catch (_) {}
+        await _saveToPrefsBackup(_abhaMasterKeyAlias, masterSeed);
       }
     } catch (_) {
       masterSeed = 'smritivan_abha_master_key_fallback_seed_2026';
@@ -117,4 +161,3 @@ class EncryptionService {
     return _cachedMasterKey!;
   }
 }
-
