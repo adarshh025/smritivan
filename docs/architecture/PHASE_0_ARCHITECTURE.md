@@ -52,6 +52,6 @@ The application flow is designed for extreme simplicity and clarity, avoiding co
 
 ## 7. Technical Architecture (Mobile + Backend)
 *   **Mobile:** Flutter, Riverpod (State Management), Drift (Local SQLite).
-*   **AI/DDA:** Local execution of the Cognitive Vitality Score (CVS) and dynamic difficulty algorithms to ensure immediate, offline response.
+*   **Adaptive DDA:** Local execution of the Cognitive Vitality Score (CVS) and dynamic difficulty algorithms to ensure immediate, offline response.
 *   **Backend:** Python FastAPI + PostgreSQL.
 *   **Sync Mechanism:** A background sync queue on the mobile client pushes batched events to the FastAPI backend when the internet is restored, using timestamp-based conflict resolution.

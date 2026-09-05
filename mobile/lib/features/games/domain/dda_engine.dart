@@ -34,7 +34,7 @@ class DDAResult {
   });
 }
 
-/// Core AI Dynamic Difficulty Adjustment Engine
+/// Dynamic Difficulty Adjustment Engine (DDA)
 /// Implements Reinforcement Heuristic: D_(t+1) = D_t + α(P_success - P_target) - β(T_latency + E_rate)
 class DDAEngine {
   DDAEngine._();

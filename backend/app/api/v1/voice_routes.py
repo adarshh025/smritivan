@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter, status
 from app.services.bhashini_service import BhashiniService
 
-router = APIRouter(prefix="/ai", tags=["Bhashini Regional Voice AI"])
+router = APIRouter(prefix="/voice", tags=["Bhashini Regional Voice Service"])
 
 class TTSRequest(BaseModel):
     text: str

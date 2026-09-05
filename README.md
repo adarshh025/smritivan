@@ -1,6 +1,6 @@
 # 🌿 SMRITIVAN (स्मृतिवन)
 **SIH 2026 | Problem Statement 26003**  
-*AI-Based Cognitive Gaming and Memory Assistance Platform for Elderly Dementia Patients in the North Eastern Region*
+*Cognitive Gaming and Memory Assistance Platform for Elderly Dementia Patients in the North Eastern Region*
 
 ## 👥 Team: laccha paratha
 * Adarsh A
@@ -15,7 +15,7 @@ SMRITIVAN is a calm digital "memory garden". We moved away from clinical, hospit
 
 ## 🧠 Core Features
 1. **Dynamic Cognitive Game Engine:** Culturally personalized games (e.g., Muga Silk Visual Memory, Bihu Auditory Focus).
-2. **On-Device AI (DDA):** Heuristic AI adjusts difficulty locally based on reaction time and error rates to prevent user frustration.
+2. **On-Device Adaptive Engine (DDA):** Dynamic difficulty adjustment adapts difficulty locally based on reaction time and error rates to prevent user frustration.
 3. **Cognitive Vitality Score (CVS):** Tracks long-term cognitive health without making alarming medical claims.
 4. **Deep Localization:** UI and voice interaction adapt entirely to English, Hindi, Assamese, Meitei, Khasi, and Bodo.
 5. **Caregiver Ecosystem:** PIN-protected dashboards and offline-syncing queues that transmit data to healthcare workers only when internet is restored.

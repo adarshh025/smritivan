@@ -30,7 +30,7 @@ class AboutView extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               const Text(
-                "An AI-Based Cognitive Gaming and Memory Assistance Platform for Elderly Dementia Patients in the North Eastern Region (NER) of India.",
+                "A Cognitive Gaming and Memory Assistance Platform for Elderly Dementia Patients in the North Eastern Region (NER) of India.",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 18, color: Colors.black87),
               ),

@@ -288,7 +288,7 @@ class _CaregiverDashboardScreenState extends ConsumerState<CaregiverDashboardScr
           ),
           const SizedBox(height: 6),
           Text(
-            'Longitudinal CVS tracking calculated by local AI DDA heuristic',
+            'Longitudinal CVS tracking calculated by local adaptive DDA heuristic',
             style: AppTypography.metricLabel,
           ),
           const SizedBox(height: 24),

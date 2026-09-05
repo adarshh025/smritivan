@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="SMRITIVAN API",
-    description="Backend for the SMRITIVAN AI-Based Cognitive Assistance Platform",
+    description="Backend for the SMRITIVAN Cognitive Assistance Platform",
     version="1.0.0"
 )
 

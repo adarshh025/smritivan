@@ -93,7 +93,7 @@ class GameTelemetryState {
   }
 }
 
-/// StateNotifier that manages real-time telemetry and triggers the AI DDA heuristic
+/// StateNotifier that manages real-time telemetry and triggers the adaptive DDA heuristic
 class GameTelemetryNotifier extends StateNotifier<GameTelemetryState> {
   final Ref _ref;
 
@@ -194,7 +194,7 @@ class GameTelemetryNotifier extends StateNotifier<GameTelemetryState> {
     // Retrieve previous session CVS for anomaly detection
     final prevSession = await sessionRepo.getLatestSession(userId, state.gameType);
 
-    // 1. Run Core AI DDA Algorithm
+    // 1. Run Core DDA Algorithm
     final ddaResult = DDAEngine.calculate(
       currentDifficulty: state.currentDifficulty,
       totalAttempts: max(1, state.totalAttempts),

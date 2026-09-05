@@ -30,7 +30,7 @@ class BhashiniService:
             "sample_rate": 22050,
             "synthesized_text": text,
             "audio_content_base64_mock": f"BHASHINI_AUDIO_STREAM_NER_{lang.upper()}_2026",
-            "service_provider": "Bhashini AI / National Language Translation Mission (NLTM)",
+            "service_provider": "Bhashini Regional Voice Service / National Language Translation Mission (NLTM)",
         }
 
     @staticmethod

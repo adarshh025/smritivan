@@ -65,7 +65,7 @@ class AboutScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'AI-Based Cognitive Gaming & Memory Assistance for Elderly Dementia Patients in NER',
+                      'Cognitive Gaming & Memory Assistance for Elderly Dementia Patients in NER',
                       style: AppTypography.bodyMedium,
                       textAlign: TextAlign.center,
                     ),
@@ -123,7 +123,7 @@ class AboutScreen extends StatelessWidget {
                       Text('Core Contributors:', style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       _buildMemberTile('Adarsh A', 'Principal Architect & Full-Stack Lead'),
-                      _buildMemberTile('Twinkle B', 'AI/ML & Cognitive DDA Engine Lead'),
+                      _buildMemberTile('Twinkle B', 'Cognitive DDA Engine Lead'),
                       _buildMemberTile('Kashish', 'Clinical UI/UX & Dementia Accessibility'),
                       _buildMemberTile('Utkarsh', 'Offline CRDT & Encrypted SQLite Lead'),
                       _buildMemberTile('Pratibha', 'NER Cultural Audio & Regional Voice Lead'),

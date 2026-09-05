@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import 'ai_difficulty_engine.dart';
+import 'adaptive_difficulty_engine.dart';
 import '../data/game_session_repository.dart';
 import '../domain/game_session_model.dart';
 import '../presentation/game_telemetry_provider.dart';
@@ -94,7 +94,7 @@ class GameSessionTracker extends StateNotifier<GameSessionState> {
     // Normalize latency (assuming 5000ms is max expected latency for elderly)
     double normalizedLatency = (avgReactionTime / 5000.0).clamp(0.0, 1.0);
 
-    double nextDifficulty = AIDifficultyEngine.calculateNextDifficulty(
+    double nextDifficulty = AdaptiveDifficultyEngine.calculateNextDifficulty(
       currentDifficulty: currentDifficulty,
       successRate: successRate,
       targetSuccessRate: 0.7,
@@ -102,7 +102,7 @@ class GameSessionTracker extends StateNotifier<GameSessionState> {
       errorRate: errorRate,
     );
 
-    double cvs = AIDifficultyEngine.calculateCVS(
+    double cvs = AdaptiveDifficultyEngine.calculateCVS(
       successRate: successRate,
       errorRate: errorRate,
       normalizedLatency: normalizedLatency,

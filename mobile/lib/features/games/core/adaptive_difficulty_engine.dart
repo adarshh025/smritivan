@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Team laccha paratha (SIH 2026). All rights reserved.
 import 'dart:math';
 
-class AIDifficultyEngine {
+class AdaptiveDifficultyEngine {
   static const double minDifficulty = 1.0;
   static const double maxDifficulty = 10.0;
   
@@ -52,4 +52,3 @@ class AIDifficultyEngine {
     return cvs.clamp(0.0, 100.0);
   }
 }
-
