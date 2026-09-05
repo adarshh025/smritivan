@@ -45,6 +45,7 @@ class CaregiverDashboardNotifier extends StateNotifier<CaregiverDashboardState> 
   Future<void> loadData() async {
     final targetUserId = _ref.read(activeUserProvider).value?.id ?? _userId;
 
+    if (!mounted) return;
     state = CaregiverDashboardState(
       gameStats: state.gameStats,
       gameHistory: state.gameHistory,
@@ -59,10 +60,11 @@ class CaregiverDashboardNotifier extends StateNotifier<CaregiverDashboardState> 
       final wellbeingRepo = _ref.read(wellbeingRepositoryProvider);
 
       final stats = await gameRepo.getAggregateStats(targetUserId);
-      final history = await gameRepo.getSessionHistory(targetUserId, limit: 15);
+      final history = await gameRepo.getSessionHistory(targetUserId, limit: 100);
       final reminders = await reminderRepo.getRemindersForUser(targetUserId);
       final wellbeing = await wellbeingRepo.getRecentCheckIns(targetUserId, limit: 10);
 
+      if (!mounted) return;
       state = CaregiverDashboardState(
         gameStats: stats,
         gameHistory: history,
@@ -71,6 +73,7 @@ class CaregiverDashboardNotifier extends StateNotifier<CaregiverDashboardState> 
         isLoading: false,
       );
     } catch (e) {
+      if (!mounted) return;
       state = CaregiverDashboardState(
         gameStats: state.gameStats,
         gameHistory: state.gameHistory,

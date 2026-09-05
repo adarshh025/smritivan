@@ -19,8 +19,6 @@ import 'package:smritivan_app/features/games/presentation/game_telemetry_provide
 import 'package:smritivan_app/features/wellbeing/domain/wellbeing_model.dart';
 import 'package:smritivan_app/features/wellbeing/data/wellbeing_repository.dart';
 import 'package:smritivan_app/features/home/presentation/elder_home_view.dart';
-import 'package:smritivan_app/features/home/application/elder_home_provider.dart';
-import 'package:smritivan_app/features/caregiver/application/caregiver_dashboard_provider.dart';
 import 'package:smritivan_app/l10n/app_localizations.dart';
 
 // In-Memory Mock Repositories for deterministic testing

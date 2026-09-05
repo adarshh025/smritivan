@@ -36,6 +36,7 @@ import '../../auth_profile/presentation/user_provider.dart';
 import '../../reminders/application/reminder_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../settings/presentation/patient_settings_view.dart';
+import '../../analytics/presentation/patient_analytics_view.dart';
 
 class ElderHomeView extends ConsumerStatefulWidget {
   const ElderHomeView({Key? key}) : super(key: key);
@@ -109,6 +110,16 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
         backgroundColor: isEvening ? const Color(0xFF2F3E46) : AppColors.deepSageGreen,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.show_chart_rounded, color: Colors.white, size: 28),
+            tooltip: 'Your Progress',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PatientAnalyticsView()),
+            ).then((_) {
+              ref.read(elderHomeProvider.notifier).loadData();
+            }),
+          ),
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.white, size: 28),
             tooltip: 'Settings',
@@ -460,11 +471,10 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
                 onTap: () {
-                  _scrollController.animateTo(
-                    450,
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeInOut,
-                  );
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PatientAnalyticsView()),
+                  ).then((_) => ref.read(elderHomeProvider.notifier).loadData());
                 },
                 child: _buildOverviewStat(
                   l10n.activityLabel,

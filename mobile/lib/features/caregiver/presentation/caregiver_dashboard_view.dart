@@ -14,6 +14,7 @@ import '../domain/caregiver_alert.dart';
 import 'caregiver_auth_view.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/patient_progress_chart.dart';
 
 class CaregiverDashboardView extends ConsumerStatefulWidget {
   const CaregiverDashboardView({Key? key}) : super(key: key);
@@ -24,6 +25,7 @@ class CaregiverDashboardView extends ConsumerStatefulWidget {
 
 class _CaregiverDashboardViewState extends ConsumerState<CaregiverDashboardView> {
   int _selectedIndex = 0;
+  String _analyticsTimeFilter = '30d';
 
   @override
   void initState() {
@@ -149,7 +151,7 @@ class _CaregiverDashboardViewState extends ConsumerState<CaregiverDashboardView>
             mainAxisSpacing: 16,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 2.0,
+            childAspectRatio: constraints.maxWidth > 800 ? 1.8 : 1.4,
             children: [
               _buildStatCard(l10n.totalActivities, "$totalSessions", Icons.games, Colors.green),
               _buildStatCard(
@@ -1105,41 +1107,28 @@ class _CaregiverDashboardViewState extends ConsumerState<CaregiverDashboardView>
             "Track cognitive vitality trends and clinical domain breakdowns.",
             style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
           ),
+        const SizedBox(height: 20),
+
+        // 1. Primary Line Graph from SQLite Records
+        PatientProgressChart(
+          sessions: state.gameHistory,
+          activeTimeFilter: _analyticsTimeFilter,
+          title: "Patient Longitudinal Trend",
+          onFilterChanged: (filter) {
+            setState(() => _analyticsTimeFilter = filter);
+          },
+        ),
         const SizedBox(height: 24),
         
-        if (!hasData)
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: const Column(
-              children: [
-                Icon(Icons.psychology_outlined, size: 48, color: Colors.grey),
-                SizedBox(height: 12),
-                Text(
-                  "Not enough activity data yet",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF264653)),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 6),
-                Text(
-                  "Performance analytics and domain breakdown will appear once the patient completes cognitive games.",
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          )
-        else ...[
+        if (hasData) ...[
+          Text("Clinical Domain Breakdown", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF264653))),
+          const SizedBox(height: 16),
           _buildDomainTrend("Memory Recall", memoryScore, memoryScore >= 70, isStable: (memoryScore - 70).abs() < 5),
           _buildDomainTrend("Attention & Logic", attentionScore, attentionScore >= 70, isStable: (attentionScore - 70).abs() < 5),
           _buildDomainTrend("Processing Speed", speedScore, speedScore >= 70, isStable: (speedScore - 70).abs() < 5),
+          const SizedBox(height: 24),
         ],
 
-        const SizedBox(height: 32),
         Text(l10n.gameProgression, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF264653))),
         const SizedBox(height: 16),
         _buildGameProgressionSummary(state.gameHistory, l10n),
@@ -1169,35 +1158,36 @@ class _CaregiverDashboardViewState extends ConsumerState<CaregiverDashboardView>
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color, {String? subtitle}) {
     return AppCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       backgroundColor: Colors.white,
       borderColor: Colors.grey[200]!,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(icon, color: color, size: 20),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(title, style: const TextStyle(fontSize: 14, color: Colors.grey)),
-                    Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF264653))),
+                    Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF264653)), maxLines: 1, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               )
             ],
           ),
           if (subtitle != null) ...[
-            const SizedBox(height: 8),
-            Text(subtitle, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+            const SizedBox(height: 4),
+            Text(subtitle, style: const TextStyle(fontSize: 10, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
           ]
         ],
       ),

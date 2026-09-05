@@ -1,7 +1,6 @@
 // Copyright (c) 2026 Team laccha paratha (SIH 2026). All rights reserved.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import '../../../core/database/database_provider.dart';
 import '../data/reminder_repository.dart';
 import '../domain/reminder_model.dart';
 import '../presentation/reminder_provider.dart';
