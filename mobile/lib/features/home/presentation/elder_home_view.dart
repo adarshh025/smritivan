@@ -626,57 +626,112 @@ class _ElderHomeViewState extends ConsumerState<ElderHomeView> {
                   style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: AppButton.primary(
-                        text: "Play Activity",
-                        icon: Icons.play_arrow,
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => LevelSelectionView(
-                                gameType: 'memory_match',
-                                gameTitle: 'Memory Match',
-                                gameIcon: '🧠',
-                                gameColor: const Color(0xFFE9C46A),
-                                gameBuilder: (level) => MemoryMatchGame(currentDifficulty: level),
+                LayoutBuilder(
+                  builder: (context, btnConstraints) {
+                    if (btnConstraints.maxWidth < 360) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          AppButton.primary(
+                            text: "Play Activity (Level ${currentLevel.toInt()})",
+                            icon: Icons.play_arrow,
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => LevelSelectionView(
+                                    gameType: 'memory_match',
+                                    gameTitle: 'Memory Match',
+                                    gameIcon: '🧠',
+                                    gameColor: const Color(0xFFE9C46A),
+                                    gameBuilder: (level) => MemoryMatchGame(currentDifficulty: level),
+                                  ),
+                                ),
+                              ).then((_) {
+                                ref.read(elderHomeProvider.notifier).loadData();
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.deepSageGreen,
+                              side: const BorderSide(color: AppColors.deepSageGreen, width: 1.5),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                          ).then((_) {
-                            ref.read(elderHomeProvider.notifier).loadData();
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 2,
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.deepSageGreen,
-                          side: const BorderSide(color: AppColors.deepSageGreen),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            icon: const Icon(Icons.grid_view_rounded, size: 20),
+                            label: const Text(
+                              "Explore All Games",
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                            onPressed: () {
+                              _scrollController.animateTo(
+                                600,
+                                duration: const Duration(milliseconds: 400),
+                                curve: Curves.easeInOut,
+                              );
+                            },
+                          ),
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: AppButton.primary(
+                            text: "Play Activity",
+                            icon: Icons.play_arrow,
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => LevelSelectionView(
+                                    gameType: 'memory_match',
+                                    gameTitle: 'Memory Match',
+                                    gameIcon: '🧠',
+                                    gameColor: const Color(0xFFE9C46A),
+                                    gameBuilder: (level) => MemoryMatchGame(currentDifficulty: level),
+                                  ),
+                                ),
+                              ).then((_) {
+                                ref.read(elderHomeProvider.notifier).loadData();
+                              });
+                            },
                           ),
                         ),
-                        onPressed: () {
-                          _scrollController.animateTo(
-                            600,
-                            duration: const Duration(milliseconds: 400),
-                            curve: Curves.easeInOut,
-                          );
-                        },
-                        child: const Text(
-                          "More Games",
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.deepSageGreen,
+                              side: const BorderSide(color: AppColors.deepSageGreen, width: 1.5),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            icon: const Icon(Icons.grid_view_rounded, size: 18),
+                            label: const Text(
+                              "More Games",
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            onPressed: () {
+                              _scrollController.animateTo(
+                                600,
+                                duration: const Duration(milliseconds: 400),
+                                curve: Curves.easeInOut,
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
               ],
             ),

@@ -13,7 +13,6 @@ import '../../../core/audio/audio_service.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_typography.dart';
-import '../domain/reminder_model.dart';
 import 'reminder_provider.dart';
 
 /// Dementia Patient Reminders Screen (Visual & Auditory Daily Schedule)

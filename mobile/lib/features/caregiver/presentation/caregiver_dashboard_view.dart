@@ -138,7 +138,7 @@ class _CaregiverDashboardViewState extends ConsumerState<CaregiverDashboardView>
     int engagementScore = (sessionPts + adherencePts + wellbeingPts).clamp(0, 100);
 
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
       children: [
         Text(l10n.patientOverview, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF264653))),
         const SizedBox(height: 24),
@@ -466,7 +466,7 @@ class _CaregiverDashboardViewState extends ConsumerState<CaregiverDashboardView>
     events.sort((a, b) => b.dateTime.compareTo(a.dateTime));
 
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
       children: [
         Text(l10n.patientTimeline, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF264653))),
         const SizedBox(height: 8),
@@ -512,31 +512,59 @@ class _CaregiverDashboardViewState extends ConsumerState<CaregiverDashboardView>
 
   Widget _buildRemindersTab(BuildContext context, WidgetRef ref, CaregiverDashboardState state, AppLocalizations l10n, String patientName) {
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
       children: [
-        Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 16,
-          runSpacing: 16,
-          children: [
-            Text(
-              l10n.manageReminders,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF264653)),
-            ),
-            ElevatedButton.icon(
-              key: const Key('btn_reminders_tab_add'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF264653),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              icon: const Icon(Icons.add_alarm_rounded, size: 20),
-              label: const Text("Set Reminder", style: TextStyle(fontWeight: FontWeight.bold)),
-              onPressed: () => _showAddReminderDialog(context, ref, patientName),
-            )
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 450) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.manageReminders,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF264653)),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    key: const Key('btn_reminders_tab_add'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF264653),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.add_alarm_rounded, size: 20),
+                    label: const Text("Set New Reminder", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    onPressed: () => _showAddReminderDialog(context, ref, patientName),
+                  ),
+                ],
+              );
+            }
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.manageReminders,
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF264653)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton.icon(
+                  key: const Key('btn_reminders_tab_add'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF264653),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.add_alarm_rounded, size: 20),
+                  label: const Text("Set Reminder", style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: () => _showAddReminderDialog(context, ref, patientName),
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 24),
 
@@ -647,12 +675,13 @@ class _CaregiverDashboardViewState extends ConsumerState<CaregiverDashboardView>
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
+          title: const Row(
             children: [
               Icon(Icons.add_alarm_rounded, color: Color(0xFF2A9D8F)),
-              Text('Set Patient Reminder', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Set Patient Reminder', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              ),
             ],
           ),
           content: SingleChildScrollView(
@@ -1096,7 +1125,7 @@ class _CaregiverDashboardViewState extends ConsumerState<CaregiverDashboardView>
     }
 
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
       children: [
         Text(l10n.cognitiveAnalysis, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF264653))),
         const SizedBox(height: 8),

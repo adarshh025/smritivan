@@ -27,7 +27,7 @@ class PatientAnalyticsView extends ConsumerStatefulWidget {
 }
 
 class _PatientAnalyticsViewState extends ConsumerState<PatientAnalyticsView> {
-  String _timeFilter = '30d';
+  String _timeFilter = 'all';
   List<GameSessionModel> _sessions = [];
   Map<String, dynamic> _stats = {};
   bool _isLoading = true;
@@ -126,7 +126,7 @@ class _PatientAnalyticsViewState extends ConsumerState<PatientAnalyticsView> {
                 onRefresh: _loadData,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 80.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -198,7 +198,7 @@ class _PatientAnalyticsViewState extends ConsumerState<PatientAnalyticsView> {
                             mainAxisSpacing: 12,
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            childAspectRatio: 1.6,
+                            childAspectRatio: 1.35,
                             children: [
                               _buildMetricCard("Activities Done", "$totalSessions", Icons.task_alt, AppColors.deepSageGreen),
                               _buildMetricCard("Avg Engagement", totalSessions > 0 ? "${avgCvs.round()}/100" : "--", Icons.psychology, const Color(0xFFE9C46A)),
@@ -340,12 +340,15 @@ class _PatientAnalyticsViewState extends ConsumerState<PatientAnalyticsView> {
       children: gameTypes.map((g) {
         final gType = g['type']!;
         final matching = sessions.where((s) => s.gameType == gType).toList();
-        int maxLvl = 1;
+        int maxCompletedLvl = 0;
         if (matching.isNotEmpty) {
           for (final s in matching) {
-            if (s.difficultyLevel.toInt() > maxLvl) maxLvl = s.difficultyLevel.toInt();
+            final lvl = s.difficultyLevel.toInt();
+            if (lvl > maxCompletedLvl) maxCompletedLvl = lvl;
           }
         }
+
+        final nextUnlockedLvl = (maxCompletedLvl + 1).clamp(1, 3);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
@@ -371,7 +374,7 @@ class _PatientAnalyticsViewState extends ConsumerState<PatientAnalyticsView> {
                     Text(
                       matching.isEmpty
                           ? "Level 1 (Ready to play)"
-                          : "Highest Reached: Level $maxLvl (${matching.length} sessions)",
+                          : "Highest Completed: Level $maxCompletedLvl (${matching.length} sessions)",
                       style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
                   ],
@@ -381,8 +384,8 @@ class _PatientAnalyticsViewState extends ConsumerState<PatientAnalyticsView> {
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(3, (index) {
                   final lvl = index + 1;
-                  final isUnlocked = lvl <= (matching.isEmpty ? 1 : (maxLvl + 1).clamp(1, 3));
-                  final isCompleted = lvl <= (matching.isEmpty ? 0 : maxLvl);
+                  final isCompleted = lvl <= maxCompletedLvl;
+                  final isUnlocked = lvl <= nextUnlockedLvl;
 
                   return Container(
                     margin: const EdgeInsets.only(left: 4),
@@ -390,11 +393,11 @@ class _PatientAnalyticsViewState extends ConsumerState<PatientAnalyticsView> {
                     decoration: BoxDecoration(
                       color: isCompleted
                           ? AppColors.deepSageGreen
-                          : (isUnlocked ? AppColors.softSageGreen.withOpacity(0.3) : Colors.grey.shade200),
+                          : (isUnlocked ? AppColors.softSageGreen.withOpacity(0.35) : Colors.grey.shade200),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      isCompleted ? "L$lvl ✓" : (isUnlocked ? "L$lvl" : "🔒"),
+                      isCompleted ? "L$lvl ✓" : (isUnlocked ? "L$lvl 🔓" : "🔒"),
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,

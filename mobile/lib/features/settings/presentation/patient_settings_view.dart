@@ -26,7 +26,6 @@ class PatientSettingsView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
     final userState = ref.watch(activeUserProvider);
     final user = userState.value ?? const UserModel(
       id: 'patient_ner_001',

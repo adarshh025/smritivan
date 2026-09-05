@@ -187,9 +187,11 @@ class _PatientProgressChartState extends State<PatientProgressChart> {
   }
 
   Widget _buildEmptyState() {
+    final bool hasGlobalSessions = widget.sessions.isNotEmpty;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
       decoration: BoxDecoration(
         color: AppColors.warmSand.withOpacity(0.4),
         borderRadius: BorderRadius.circular(16),
@@ -199,36 +201,52 @@ class _PatientProgressChartState extends State<PatientProgressChart> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: AppColors.softSageGreen.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.show_chart_rounded,
-              size: 40,
+            child: Icon(
+              hasGlobalSessions ? Icons.history_toggle_off_rounded : Icons.show_chart_rounded,
+              size: 38,
               color: AppColors.deepSageGreen,
             ),
           ),
-          const SizedBox(height: 14),
-          const Text(
-            "No activities recorded yet",
-            style: TextStyle(
+          const SizedBox(height: 12),
+          Text(
+            hasGlobalSessions ? "No activities in selected timeframe" : "No activities recorded yet",
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppColors.textCharcoal,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            "Complete your first cognitive game to begin tracking your engagement progress.",
+          Text(
+            hasGlobalSessions
+                ? "You have ${widget.sessions.length} recorded session${widget.sessions.length > 1 ? 's' : ''} in total. Switch timeframe to \"All Time\" to view your graph."
+                : "Complete your first cognitive game to begin tracking your engagement progress.",
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13,
               color: AppColors.textSecondary,
-              height: 1.3,
+              height: 1.35,
             ),
           ),
+          if (hasGlobalSessions && widget.onFilterChanged != null) ...[
+            const SizedBox(height: 14),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.deepSageGreen,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.all_inclusive, size: 18),
+              label: const Text("View All Time", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              onPressed: () => widget.onFilterChanged!('all'),
+            ),
+          ],
         ],
       ),
     );
