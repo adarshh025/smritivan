@@ -16,6 +16,7 @@ import '../../auth_profile/presentation/user_provider.dart';
 import '../../auth_profile/presentation/edit_patient_profile_view.dart';
 import '../../auth_profile/presentation/manage_caregivers_view.dart';
 import '../../caregiver/presentation/caregiver_auth_view.dart';
+import '../../health_worker/presentation/health_worker_auth_view.dart';
 import '../../../core/audio/audio_service.dart';
 import '../../../core/haptic/haptic_service.dart';
 import '../../home/application/elder_home_provider.dart';
@@ -147,6 +148,30 @@ class PatientSettingsView extends ConsumerWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const CaregiverAuthView(isResetMode: true)),
+              );
+            },
+          ),
+          _buildListTile(
+            context,
+            icon: Icons.medical_services_outlined,
+            title: "Health Worker Space",
+            subtitle: "Community health worker & clinical surveillance portal",
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HealthWorkerAuthView()),
+              );
+            },
+          ),
+          _buildListTile(
+            context,
+            icon: Icons.pin_outlined,
+            title: "Health Worker PIN",
+            subtitle: "Set or change Healthcare Professional PIN",
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HealthWorkerAuthView(isResetMode: true)),
               );
             },
           ),

@@ -98,5 +98,29 @@ class UserRepository {
     );
     return results.map((e) => CaregiverRelationshipModel.fromMap(e)).toList();
   }
+
+  /// Retrieves all active (non-deleted) registered patients for health worker monitoring
+  Future<List<UserModel>> getAllPatients() async {
+    final db = await _appDb.database;
+    final results = await db.query(
+      DbTables.users,
+      where: '${DbTables.colIsDeleted} = 0',
+      orderBy: 'updated_at DESC',
+    );
+    return results.map((row) => UserModel.fromMap(row)).toList();
+  }
+
+  /// Retrieves a specific patient by ID
+  Future<UserModel?> getPatientById(String userId) async {
+    final db = await _appDb.database;
+    final results = await db.query(
+      DbTables.users,
+      where: 'id = ? AND ${DbTables.colIsDeleted} = 0',
+      whereArgs: [userId],
+      limit: 1,
+    );
+    if (results.isEmpty) return null;
+    return UserModel.fromMap(results.first);
+  }
 }
 

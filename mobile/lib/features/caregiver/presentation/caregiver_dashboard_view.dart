@@ -12,6 +12,7 @@ import '../../daily_plan/domain/daily_plan_model.dart';
 import '../application/caregiver_alert_provider.dart';
 import '../domain/caregiver_alert.dart';
 import 'caregiver_auth_view.dart';
+import '../../health_worker/presentation/health_worker_auth_view.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/patient_progress_chart.dart';
@@ -50,6 +51,14 @@ class _CaregiverDashboardViewState extends ConsumerState<CaregiverDashboardView>
       appBar: AppBar(
         title: Text("👤 $patientName (Patient)", style: const TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.medical_services_outlined),
+            tooltip: "Health Worker Space",
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HealthWorkerAuthView()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.lock_reset),
             tooltip: "Change PIN",

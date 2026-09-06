@@ -33,6 +33,12 @@ class FakeUserRepo implements UserRepository {
 
   @override
   Future<void> saveCaregiver(CaregiverModel caregiver) async {}
+
+  @override
+  Future<List<UserModel>> getAllPatients() async => [];
+
+  @override
+  Future<UserModel?> getPatientById(String userId) async => null;
 }
 
 void main() {
