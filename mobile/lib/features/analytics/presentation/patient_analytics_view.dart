@@ -43,6 +43,9 @@ class _PatientAnalyticsViewState extends ConsumerState<PatientAnalyticsView> {
         _loadData();
       }
     });
+    ref.listenManual(elderHomeProvider, (previous, next) {
+      _loadData();
+    });
   }
 
   Future<void> _loadData() async {

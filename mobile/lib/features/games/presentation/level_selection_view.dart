@@ -204,10 +204,13 @@ class _LevelSelectionViewState extends ConsumerState<LevelSelectionView> {
   );
 }
 
-  void _launchGame(double level) {
-    Navigator.pushReplacement(
+  Future<void> _launchGame(double level) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => widget.gameBuilder(level)),
     );
+    if (mounted) {
+      _loadProgression();
+    }
   }
 }

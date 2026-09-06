@@ -19,8 +19,8 @@ class GameProgressionService {
       double maxUnlocked = 1.0;
 
       for (int level = 1; level <= 4; level++) {
-        // Find sessions at the current level
-        final sessionsAtLevel = gameHistory.where((h) => h.difficultyLevel.floor() == level).toList();
+        // Find sessions at the current level that were successfully completed
+        final sessionsAtLevel = gameHistory.where((h) => h.difficultyLevel.floor() == level && h.errorRate < 1.0).toList();
         
         // If they completed at least one session at this level, unlock next level
         if (sessionsAtLevel.isNotEmpty) {
