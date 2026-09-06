@@ -27,6 +27,7 @@ class _EditPatientProfileViewState extends ConsumerState<EditPatientProfileView>
   late TextEditingController _ageController;
   late TextEditingController _phoneController;
   String _preferredTime = 'Morning';
+  String _selectedState = 'Assam';
 
   @override
   void initState() {
@@ -36,6 +37,7 @@ class _EditPatientProfileViewState extends ConsumerState<EditPatientProfileView>
     _ageController = TextEditingController(text: user?.age?.toString() ?? '68');
     _phoneController = TextEditingController(text: user?.phone ?? '+91 98765 43210');
     _preferredTime = user?.preferredActivityTime ?? 'Morning';
+    _selectedState = user?.state ?? 'Assam';
   }
 
   @override
@@ -54,6 +56,7 @@ class _EditPatientProfileViewState extends ConsumerState<EditPatientProfileView>
           id: 'patient_ner_001',
           name: 'Bhaben Bora (ভবেন বৰা)',
           nativeLanguage: 'as',
+          state: 'Assam',
           dementiaStage: 'Early-Stage (Mild Cognitive Impairment)',
           soundEffectsEnabled: true,
           voiceGuidanceEnabled: true,
@@ -67,6 +70,7 @@ class _EditPatientProfileViewState extends ConsumerState<EditPatientProfileView>
           name: _nameController.text.trim(),
           age: int.tryParse(_ageController.text.trim()),
           phone: _phoneController.text.trim(),
+          state: _selectedState,
           preferredActivityTime: _preferredTime,
           updatedAt: DateTime.now().toIso8601String(),
         );
@@ -144,6 +148,34 @@ class _EditPatientProfileViewState extends ConsumerState<EditPatientProfileView>
                   prefixIcon: Icon(Icons.phone),
                 ),
                 style: const TextStyle(fontSize: 20),
+              ),
+              const SizedBox(height: 24),
+              DropdownButtonFormField<String>(
+                value: _selectedState,
+                decoration: const InputDecoration(
+                  labelText: "North Eastern State",
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.location_on),
+                ),
+                style: const TextStyle(fontSize: 18, color: Colors.black87),
+                items: [
+                  'Assam',
+                  'Arunachal Pradesh',
+                  'Manipur',
+                  'Meghalaya',
+                  'Mizoram',
+                  'Nagaland',
+                  'Sikkim',
+                  'Tripura',
+                ].map((String val) {
+                  return DropdownMenuItem<String>(
+                    value: val,
+                    child: Text(val),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _selectedState = val);
+                },
               ),
               const SizedBox(height: 32),
               const Text(

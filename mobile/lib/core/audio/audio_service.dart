@@ -12,6 +12,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:developer' as developer;
 
+import '../localization/ner_localization_config.dart';
 import '../../features/auth_profile/presentation/user_provider.dart';
 
 class AudioService {
@@ -24,6 +25,8 @@ class AudioService {
   final String nativeLanguage;
 
   bool _isTtsInitialized = false;
+  String _activeTtsLocale = 'en-IN';
+  bool _isCurrentLocaleSupported = true;
 
   AudioService({
     required this.soundEffectsEnabled,
@@ -33,23 +36,51 @@ class AudioService {
     _initTts();
   }
 
+  String get activeTtsLocale => _activeTtsLocale;
+  bool get isCurrentLocaleSupported => _isCurrentLocaleSupported;
+
   Future<void> _initTts() async {
-    // Map internal language codes to TTS locales
-    String ttsLang = "en-US";
-    switch (nativeLanguage) {
-      case 'hi': ttsLang = "hi-IN"; break;
-      // Other regional languages might fallback to 'en-US' or generic 'hi-IN' if unsupported by native TTS
-      // For MVP we just use the platform's default or English.
-      default: ttsLang = "en-US"; break;
+    try {
+      final targetLocale = NerLocalizationConfig.getTtsLocaleForLanguage(nativeLanguage);
+      _activeTtsLocale = targetLocale;
+
+      // Check if the target locale is supported on this device TTS engine
+      try {
+        final availability = await _tts.isLanguageAvailable(targetLocale);
+        if (availability == 1 || availability == true) {
+          await _tts.setLanguage(targetLocale);
+          _isCurrentLocaleSupported = true;
+        } else {
+          // Try base language code without country tag (e.g. 'as', 'bn', 'hi', 'ne')
+          final baseCode = nativeLanguage.toLowerCase();
+          final baseAvailability = await _tts.isLanguageAvailable(baseCode);
+          if (baseAvailability == 1 || baseAvailability == true) {
+            await _tts.setLanguage(baseCode);
+            _activeTtsLocale = baseCode;
+            _isCurrentLocaleSupported = true;
+          } else {
+            // Regional language TTS voice package is not present on this device's TTS engine.
+            // Rather than speaking English words masquerading as regional text, flag capability
+            _isCurrentLocaleSupported = false;
+            developer.log("TTS for $targetLocale not natively installed on device TTS engine.");
+            // Fallback to en-IN for general English prompts if user prefers
+            await _tts.setLanguage("en-IN");
+          }
+        }
+      } catch (e) {
+        developer.log("TTS capability check error: $e");
+        await _tts.setLanguage("en-IN");
+      }
+
+      await _tts.setSpeechRate(0.4); // Slower speech rate for elderly comprehension
+      await _tts.setPitch(1.0);
+      _isTtsInitialized = true;
+    } catch (e) {
+      developer.log("TTS Initialization failed: $e");
     }
-    
-    await _tts.setLanguage(ttsLang);
-    await _tts.setSpeechRate(0.4); // Slower for elderly comprehension
-    await _tts.setPitch(1.0);
-    _isTtsInitialized = true;
   }
 
-  /// Check if asset exists in the bundle
+  /// Check if an asset exists in the bundle
   Future<bool> _assetExists(String path) async {
     try {
       await rootBundle.load(path);
@@ -59,9 +90,9 @@ class AudioService {
     }
   }
 
-  /// Speaks the given text using TTS
+  /// Speaks the given text using TTS in the user's selected regional language
   Future<void> speakInstruction(String text) async {
-    if (!voiceGuidanceEnabled) return;
+    if (!voiceGuidanceEnabled || text.trim().isEmpty) return;
     try {
       await _tts.stop();
       if (!_isTtsInitialized) await _initTts();
@@ -81,11 +112,9 @@ class AudioService {
 
       bool exists = await _assetExists(assetPath);
       if (exists) {
-        // audioplayers expects path relative to 'assets/'
         String cleanPath = assetPath.replaceAll('assets/', '');
         await _sfxPlayer.play(AssetSource(cleanPath));
       } else {
-        developer.log("Audio asset missing: $assetPath. Falling back to TTS.");
         await speakInstruction(fallbackText);
       }
     } catch (e) {
@@ -99,12 +128,10 @@ class AudioService {
     try {
       await _tts.stop();
       await _sfxPlayer.stop();
-      // Try playing a success sound if we had one
-      // Since we don't have a reliable success.mp3, fallback to TTS
       await speakInstruction("Well done!");
     } catch (_) {}
   }
-  
+
   Future<void> playErrorChime() async {
     if (!soundEffectsEnabled) return;
     try {
@@ -146,16 +173,16 @@ class AudioService {
 
 final audioServiceProvider = Provider<AudioService>((ref) {
   final user = ref.watch(activeUserProvider).value;
-  
+
   final service = AudioService(
     soundEffectsEnabled: user?.soundEffectsEnabled ?? true,
     voiceGuidanceEnabled: user?.voiceGuidanceEnabled ?? true,
-    nativeLanguage: user?.nativeLanguage ?? 'en',
+    nativeLanguage: user?.nativeLanguage ?? 'as',
   );
-  
+
   ref.onDispose(() {
     service.dispose();
   });
-  
+
   return service;
 });

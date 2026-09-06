@@ -22,7 +22,7 @@ import 'database_tables.dart';
 /// Offline-First AES-256 Encrypted Database Engine for SMRITIVAN
 class AppDatabase {
   static const String _dbFileName = 'smritivan_encrypted.db';
-  static const int _dbVersion = 5;
+  static const int _dbVersion = 6;
 
   final EncryptionService _encryptionService;
   final String _nodeId;
@@ -168,6 +168,12 @@ class AppDatabase {
           try { await db.execute(DbTables.createCaregiversTable); } catch (_) {}
           try { await db.execute(DbTables.createRelationshipsTable); } catch (_) {}
         }
+        if (oldVersion < 6) {
+          try { await db.execute("ALTER TABLE ${DbTables.users} ADD COLUMN state TEXT NOT NULL DEFAULT 'Assam'"); } catch (_) {}
+        }
+      },
+      onOpen: (db) async {
+        try { await db.execute("ALTER TABLE ${DbTables.users} ADD COLUMN state TEXT NOT NULL DEFAULT 'Assam'"); } catch (_) {}
       },
     );
   }

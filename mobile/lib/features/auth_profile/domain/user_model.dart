@@ -10,7 +10,8 @@
 class UserModel {
   final String id;
   final String name;
-  final String nativeLanguage; // 'as', 'mni', 'kha', 'brx', 'hi', 'en'
+  final String nativeLanguage; // 'as', 'mni', 'kha', 'brx', 'hi', 'en', 'ne'
+  final String state; // One of the 8 NER states: 'Assam', 'Arunachal Pradesh', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Sikkim', 'Tripura'
   final String dementiaStage; // 'Early-Stage MCI', 'Moderate', 'Severe'
   final String? caregiverId;
   final int? age;
@@ -31,6 +32,7 @@ class UserModel {
     required this.id,
     required this.name,
     required this.nativeLanguage,
+    this.state = 'Assam',
     required this.dementiaStage,
     this.caregiverId,
     this.age,
@@ -52,6 +54,7 @@ class UserModel {
     String? id,
     String? name,
     String? nativeLanguage,
+    String? state,
     String? dementiaStage,
     String? caregiverId,
     int? age,
@@ -72,6 +75,7 @@ class UserModel {
       id: id ?? this.id,
       name: name ?? this.name,
       nativeLanguage: nativeLanguage ?? this.nativeLanguage,
+      state: state ?? this.state,
       dementiaStage: dementiaStage ?? this.dementiaStage,
       caregiverId: caregiverId ?? this.caregiverId,
       age: age ?? this.age,
@@ -95,6 +99,7 @@ class UserModel {
       'id': id,
       'name': name,
       'native_language': nativeLanguage,
+      'state': state,
       'dementia_stage': dementiaStage,
       'caregiver_id': caregiverId,
       'age': age,
@@ -118,6 +123,7 @@ class UserModel {
       id: map['id'] as String,
       name: map['name'] as String,
       nativeLanguage: map['native_language'] as String,
+      state: map['state'] as String? ?? 'Assam',
       dementiaStage: map['dementia_stage'] as String,
       caregiverId: map['caregiver_id'] as String?,
       age: map['age'] as int?,

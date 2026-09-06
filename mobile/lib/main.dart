@@ -37,6 +37,7 @@ class SmritivanApp extends ConsumerWidget {
         Locale('hi'),
         Locale('as'),
         Locale('bn'),
+        Locale('ne'),
       ],
     );
   }

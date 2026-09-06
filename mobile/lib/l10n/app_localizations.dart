@@ -9,6 +9,7 @@ import 'app_localizations_as.dart';
 import 'app_localizations_bn.dart';
 import 'app_localizations_en.dart';
 import 'app_localizations_hi.dart';
+import 'app_localizations_ne.dart';
 
 // ignore_for_file: type=lint
 
@@ -99,7 +100,8 @@ abstract class AppLocalizations {
     Locale('as'),
     Locale('bn'),
     Locale('en'),
-    Locale('hi')
+    Locale('hi'),
+    Locale('ne')
   ];
 
   /// No description provided for @welcomeTitle.
@@ -492,7 +494,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['as', 'bn', 'en', 'hi'].contains(locale.languageCode);
+      <String>['as', 'bn', 'en', 'hi', 'ne'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -509,6 +511,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsEn();
     case 'hi':
       return AppLocalizationsHi();
+    case 'ne':
+      return AppLocalizationsNe();
   }
 
   throw FlutterError(

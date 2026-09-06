@@ -20,6 +20,10 @@ class MockAudioService implements AudioService {
   bool get voiceGuidanceEnabled => true;
   @override
   String get nativeLanguage => 'en';
+  @override
+  String get activeTtsLocale => 'en-IN';
+  @override
+  bool get isCurrentLocaleSupported => true;
 
   @override
   Future<void> speakInstruction(String text) async {}

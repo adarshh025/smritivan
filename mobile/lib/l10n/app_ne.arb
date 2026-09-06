@@ -1,0 +1,102 @@
+{
+  "@@locale": "ne",
+  "welcomeTitle": "स्मृति, दैनिक दिनचर्या र आनन्दमय गतिविधिको लागि एक सरल ठाउँ।",
+  "startBtn": "सुरु गरौँ",
+  "caregiverSetupBtn": "हेरचाहकर्ता सेटअप",
+  "languageQuestion": "आफ्नो भाषा छान्नुहोस्",
+  "english": "English",
+  "hindi": "हिंदी",
+  "assamese": "অসমীয়া",
+  "bengali": "বাংলা",
+  "regionQuestion": "तपाईं कुन राज्यबाट हुनुहुन्छ?",
+  
+  "goodAfternoon": "शुभ दिउँसो, {name}",
+  "@goodAfternoon": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "howAreYouFeeling": "आज तपाईंलाई कस्तो महसुस हुँदैछ?",
+  "feelingGood": "राम्रो",
+  "feelingOkay": "ठिकै",
+  "feelingNotGreat": "राम्रो छैन",
+  "wellbeingSaved": "स्वास्थ्य स्थिति सुरक्षित गरियो!",
+  "cognitiveGames": "🧠 संज्ञानात्मक खेलहरू",
+  "cognitiveGamesDesc": "आफ्नो स्मृति, ध्यान र सोचको अभ्यास गर्न गतिविधि छान्नुहोस्।",
+  "todaysReminders": "⏰ आजका सम्झौनाहरू",
+  "noRemindersToday": "आज कुनै सम्झौना छैन।",
+  "viewAllReminders": "सबै सम्झौनाहरू हेर्नुहोस्",
+  
+  "activityLabel": "🧠 गतिविधि",
+  "remindersLabel": "⏰ सम्झौनाहरू",
+  "wellbeingLabel": "❤️ स्वास्थ्य",
+  "totalSessionsLabel": "{count} जम्मा",
+  "@totalSessionsLabel": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "todayCountLabel": "{count} आज",
+  "@todayCountLabel": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  
+  "play": "खेल्नुहोस्",
+  "difficulty": "कठिनाई: {level}",
+  "@difficulty": {
+    "placeholders": {
+      "level": { "type": "String" }
+    }
+  },
+  "adaptive": "अनुकूलनीय",
+  
+  "gameMemoryMatch": "स्मृति मिलान",
+  "gameMemoryMatchDesc": "स्मृति र एकाग्रता",
+  "gamePictureRecall": "तस्बिर सम्झना",
+  "gamePictureRecallDesc": "स्मृति र ध्यान",
+  "gamePatternBuilder": "ढाँचा निर्माण",
+  "gamePatternBuilderDesc": "तर्क र ध्यान",
+  "gameWordGarden": "शब्द बगैँचा",
+  "gameWordGardenDesc": "भाषा र शब्दावली",
+  "gameCardRecall": "कार्ड सम्झना",
+  "gameCardRecallDesc": "अल्पकालीन स्मृति",
+  "gameDailyHelper": "दैनिक सहयोगी",
+  "gameDailyHelperDesc": "योजना र क्रमबद्धता",
+  
+  "markDone": "सम्पन्न भयो",
+  "done": "सम्पन्न",
+  
+  "patientOverview": "बिरामी सिंहावलोकन",
+  "totalActivities": "कुल गतिविधिहरू",
+  "engagementScore": "संलग्नता स्कोर",
+  "engagementScoreDesc": "खेल सहभागिता र प्रदर्शनबाट प्राप्त गतिविधि स्कोर।",
+  "remindersDone": "{percent}% सम्पन्न",
+  "@remindersDone": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "activityInsights": "💡 गतिविधि अन्तरदृष्टि",
+  "patientTimeline": "बिरामी समयरेखा",
+  "noActivities": "अहिलेसम्म कुनै गतिविधि रेकर्ड गरिएको छैन।",
+  "manageReminders": "सम्झौना व्यवस्थापन",
+  "addReminder": "सम्झौना थप्नुहोस्",
+  "cognitiveAnalysis": "संज्ञानात्मक गतिविधि विश्लेषण",
+  "notEnoughData": "अहिलेसम्म पर्याप्त गतिविधि डाटा छैन।",
+  "gameProgression": "खेल प्रगति",
+  "gameHistory": "खेल इतिहास",
+  "noGameHistory": "अहिलेसम्म कुनै खेल खेलिएको छैन।",
+  "currentLevel": "हालको स्तर: {level}",
+  "@currentLevel": { "placeholders": { "level": { "type": "int" } } },
+  "highestLevel": "उच्चतम स्तर: {level}",
+  "@highestLevel": { "placeholders": { "level": { "type": "int" } } },
+  "recentScore": "हालको स्कोर: {score}",
+  "@recentScore": { "placeholders": { "score": { "type": "int" } } },
+  "trendStable": "स्थिर",
+  "trendImproving": "📈 सुधारिँदै",
+  "trendNeedsPractice": "📉 थप अभ्यास चाहिन्छ"
+}

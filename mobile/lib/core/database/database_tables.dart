@@ -29,6 +29,7 @@ class DbTables {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       native_language TEXT NOT NULL,
+      state TEXT NOT NULL DEFAULT 'Assam',
       dementia_stage TEXT NOT NULL,
       caregiver_id TEXT,
       age INTEGER,
