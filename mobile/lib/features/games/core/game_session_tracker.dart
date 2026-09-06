@@ -75,16 +75,21 @@ class GameSessionTracker extends StateNotifier<GameSessionState> {
       reactionTimesMs: [...state.reactionTimesMs, reactionTime],
     );
     
-    _lastInteractionTime = null; // Reset for next attempt
+    _lastInteractionTime = DateTime.now(); // Reset for subsequent attempts
   }
 
   Map<String, dynamic> finalizeSession(double currentDifficulty) {
-    int totalAttempts = state.totalAttempts > 0 ? state.totalAttempts : 1;
-    int successfulAttempts = state.successfulAttempts > 0 ? state.successfulAttempts : 1;
+    int totalAttempts = state.totalAttempts;
+    int successfulAttempts = state.successfulAttempts;
     int totalErrors = state.totalErrors;
 
-    double successRate = (successfulAttempts / totalAttempts).clamp(0.0, 1.0);
-    double errorRate = (totalErrors / totalAttempts).clamp(0.0, 1.0);
+    // Real accuracy calculation based on actual gameplay attempts
+    double successRate = totalAttempts > 0 
+        ? (successfulAttempts / totalAttempts).clamp(0.0, 1.0)
+        : (successfulAttempts > 0 ? 1.0 : 0.0);
+    double errorRate = totalAttempts > 0
+        ? (totalErrors / totalAttempts).clamp(0.0, 1.0)
+        : 0.0;
     
     // Average reaction time
     double avgReactionTime = state.reactionTimesMs.isNotEmpty 
@@ -131,7 +136,14 @@ class GameSessionTracker extends StateNotifier<GameSessionState> {
       final user = ref.read(activeUserProvider).value;
       final userId = user?.id ?? 'patient_ner_001';
       final sessionRepo = ref.read(gameSessionRepositoryProvider);
-      final appDb = ref.read(appDatabaseProvider);
+      
+      String hlcString = '';
+      try {
+        final appDb = ref.read(appDatabaseProvider);
+        hlcString = appDb.generateNextHlc().toCanonicalString();
+      } catch (_) {
+        hlcString = DateTime.now().toIso8601String();
+      }
 
       final sessionRecord = GameSessionModel(
         sessionId: const Uuid().v4(),
@@ -144,7 +156,7 @@ class GameSessionTracker extends StateNotifier<GameSessionState> {
         cvsScore: (results['cvs'] as num?)?.toDouble() ?? 80.0,
         timestamp: DateTime.now().toIso8601String(),
         syncStatus: 'pending',
-        hlcTimestamp: appDb.generateNextHlc().toCanonicalString(),
+        hlcTimestamp: hlcString,
       );
 
       await sessionRepo.saveGameSession(sessionRecord);

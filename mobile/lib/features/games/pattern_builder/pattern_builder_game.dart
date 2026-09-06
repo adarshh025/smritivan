@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Team laccha paratha (SIH 2026). All rights reserved.
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,7 +24,10 @@ class _PatternBuilderGameState extends ConsumerState<PatternBuilderGame> {
   late String _correctAnswer;
   
   bool _isAnswered = false;
-  bool _isCorrect = false;
+  bool _isEvaluating = false;
+  final Set<String> _wrongOptionsChosen = {};
+  String? _feedbackMessage;
+  Timer? _completionTimer;
 
   @override
   void initState() {
@@ -34,6 +37,12 @@ class _PatternBuilderGameState extends ConsumerState<PatternBuilderGame> {
       ref.read(gameSessionProvider.notifier).reset();
       ref.read(gameSessionProvider.notifier).startInteraction();
     });
+  }
+
+  @override
+  void dispose() {
+    _completionTimer?.cancel();
+    super.dispose();
   }
 
   void _generatePattern() {
@@ -104,7 +113,9 @@ class _PatternBuilderGameState extends ConsumerState<PatternBuilderGame> {
   }
 
   void _onOptionSelected(String option) {
-    if (_isAnswered) return;
+    if (_isAnswered || _isEvaluating || _wrongOptionsChosen.contains(option)) return;
+
+    setState(() => _isEvaluating = true);
 
     bool isCorrect = (option == _correctAnswer);
     ref.read(gameSessionProvider.notifier).recordAttempt(
@@ -115,45 +126,50 @@ class _PatternBuilderGameState extends ConsumerState<PatternBuilderGame> {
     if (isCorrect) {
       ref.read(hapticServiceProvider).success();
       ref.read(audioServiceProvider).playGentleSuccessChime();
+
+      setState(() {
+        _isAnswered = true;
+        _feedbackMessage = "✓ Correct!";
+        _isEvaluating = false;
+      });
+
+      _completionTimer = Timer(const Duration(milliseconds: 1500), () {
+        if (mounted) {
+          ref.read(audioServiceProvider).speakInstruction("Excellent. You completed the level.");
+          ref.read(gameSessionProvider.notifier).finalizeAndSaveSession(
+            currentDifficulty: widget.currentDifficulty,
+            gameType: 'pattern_builder',
+            ref: ref,
+          ).then((results) {
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FriendlyResultView(
+                    gameType: 'pattern_builder',
+                    gameTitle: 'Pattern Builder',
+                    gameIcon: '🧩',
+                    gameColor: const Color(0xFF264653),
+                    currentLevel: widget.currentDifficulty,
+                    results: results,
+                    gameBuilder: (lvl) => PatternBuilderGame(currentDifficulty: lvl),
+                  ),
+                ),
+              );
+            }
+          });
+        }
+      });
     } else {
       ref.read(hapticServiceProvider).error();
       ref.read(audioServiceProvider).playErrorChime();
+
+      setState(() {
+        _wrongOptionsChosen.add(option);
+        _feedbackMessage = "Try Again";
+        _isEvaluating = false;
+      });
     }
-
-    setState(() {
-      _isAnswered = true;
-      _isCorrect = isCorrect;
-    });
-
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        if (isCorrect) {
-          ref.read(audioServiceProvider).speakInstruction("Excellent. You completed the level.");
-        }
-        ref.read(gameSessionProvider.notifier).finalizeAndSaveSession(
-          currentDifficulty: widget.currentDifficulty,
-          gameType: 'pattern_builder',
-          ref: ref,
-        ).then((results) {
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => FriendlyResultView(
-                  gameType: 'pattern_builder',
-                  gameTitle: 'Pattern Builder',
-                  gameIcon: '🧩',
-                  gameColor: const Color(0xFF264653),
-                  currentLevel: widget.currentDifficulty,
-                  results: results,
-                  gameBuilder: (lvl) => PatternBuilderGame(currentDifficulty: lvl),
-                ),
-              ),
-            );
-          }
-        });
-      }
-    });
   }
 
   @override
@@ -181,7 +197,30 @@ class _PatternBuilderGameState extends ConsumerState<PatternBuilderGame> {
               ),
             ],
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 12),
+
+          if (_feedbackMessage != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: _isAnswered ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _isAnswered ? const Color(0xFF81C784) : const Color(0xFFFFB74D),
+                ),
+              ),
+              child: Text(
+                _feedbackMessage!,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _isAnswered ? const Color(0xFF2E7D32) : const Color(0xFFE65100),
+                ),
+              ),
+            ),
+
+          const SizedBox(height: 16),
           
           // Pattern Display
           AppCard(
@@ -198,37 +237,64 @@ class _PatternBuilderGameState extends ConsumerState<PatternBuilderGame> {
             ),
           ),
           
-          const SizedBox(height: 60),
+          const SizedBox(height: 40),
           
           // Options
           Wrap(
             spacing: 20,
             runSpacing: 20,
             alignment: WrapAlignment.center,
-            children: _options.map((option) => InkWell(
-              onTap: () {
-                ref.read(hapticServiceProvider).selection();
-                _onOptionSelected(option);
-              },
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: _isAnswered 
-                      ? (option == _correctAnswer ? const Color(0xFF84A98C) : Colors.grey[300])
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: _isAnswered && option == _correctAnswer ? const Color(0xFF84A98C) : const Color(0xFFCAD2C5), 
-                    width: 3
+            children: _options.map((option) {
+              final isWrong = _wrongOptionsChosen.contains(option);
+              final isTarget = _isAnswered && option == _correctAnswer;
+
+              Color bgColor = Colors.white;
+              Color borderColor = const Color(0xFFCAD2C5);
+              Color textColor = const Color(0xFF2F3E46);
+
+              if (isTarget) {
+                bgColor = const Color(0xFF84A98C);
+                borderColor = const Color(0xFF52796F);
+                textColor = Colors.white;
+              } else if (isWrong) {
+                bgColor = Colors.grey.shade200;
+                borderColor = Colors.grey.shade400;
+                textColor = Colors.grey.shade600;
+              }
+
+              return InkWell(
+                onTap: (isWrong || _isAnswered || _isEvaluating)
+                    ? null
+                    : () {
+                        ref.read(hapticServiceProvider).selection();
+                        _onOptionSelected(option);
+                      },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: borderColor, 
+                      width: isTarget ? 3 : 1.5,
+                    ),
+                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
                   ),
-                  boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                  child: Center(
+                    child: Text(
+                      isWrong ? "$option ✕" : option,
+                      style: TextStyle(
+                        fontSize: 36, 
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                  ),
                 ),
-                child: Center(
-                  child: Text(option, style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            )).toList(),
+              );
+            }).toList(),
           ),
         ],
       ),

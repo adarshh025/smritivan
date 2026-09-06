@@ -31,7 +31,9 @@ class _CardRecallGameState extends ConsumerState<CardRecallGame> {
   bool _isObserving = true;
   List<String> _selectedCards = [];
   bool _isAnswered = false;
-  bool _isCorrect = false;
+  bool _isEvaluating = false;
+  final Set<String> _wrongOptionsChosen = {};
+  String? _feedbackMessage;
   Timer? _observeTimer;
   Timer? _endTimer;
 
@@ -111,7 +113,7 @@ class _CardRecallGameState extends ConsumerState<CardRecallGame> {
   }
 
   void _onOptionSelected(String option) {
-    if (_isAnswered) return;
+    if (_isAnswered || _isEvaluating) return;
 
     if (_qType == 1) {
       ref.read(hapticServiceProvider).selection();
@@ -122,9 +124,14 @@ class _CardRecallGameState extends ConsumerState<CardRecallGame> {
         } else {
           _selectedCards.add(option);
         }
+        _feedbackMessage = null; // Clear retry banner when user adjusts selection
       });
     } else {
       // Single select for position
+      if (_wrongOptionsChosen.contains(option)) return;
+
+      setState(() => _isEvaluating = true);
+
       bool isCorrect = (option == _correctAnswerString);
       ref.read(gameSessionProvider.notifier).recordAttempt(
         success: isCorrect,
@@ -134,23 +141,32 @@ class _CardRecallGameState extends ConsumerState<CardRecallGame> {
       if (isCorrect) {
         ref.read(hapticServiceProvider).success();
         ref.read(audioServiceProvider).playGentleSuccessChime();
+
+        setState(() {
+          _selectedCards = [option];
+          _isAnswered = true;
+          _feedbackMessage = "✓ Correct!";
+          _isEvaluating = false;
+        });
+
+        _endGame();
       } else {
         ref.read(hapticServiceProvider).error();
         ref.read(audioServiceProvider).playErrorChime();
+
+        setState(() {
+          _wrongOptionsChosen.add(option);
+          _feedbackMessage = "Try Again";
+          _isEvaluating = false;
+        });
       }
-
-      setState(() {
-        _selectedCards = [option];
-        _isAnswered = true;
-        _isCorrect = isCorrect;
-      });
-
-      _endGame();
     }
   }
 
   void _submitMultiAnswer() {
-    if (_isAnswered || _selectedCards.isEmpty) return;
+    if (_isAnswered || _isEvaluating || _selectedCards.isEmpty) return;
+
+    setState(() => _isEvaluating = true);
 
     bool isCorrect = _selectedCards.length == _targetCards.length && 
                      _selectedCards.every((item) => _targetCards.contains(item));
@@ -163,25 +179,29 @@ class _CardRecallGameState extends ConsumerState<CardRecallGame> {
     if (isCorrect) {
       ref.read(hapticServiceProvider).success();
       ref.read(audioServiceProvider).playGentleSuccessChime();
+
+      setState(() {
+        _isAnswered = true;
+        _feedbackMessage = "✓ Correct!";
+        _isEvaluating = false;
+      });
+
+      _endGame();
     } else {
       ref.read(hapticServiceProvider).error();
       ref.read(audioServiceProvider).playErrorChime();
+
+      setState(() {
+        _feedbackMessage = "Try Again! Pick the ${_targetCards.length} cards shown.";
+        _isEvaluating = false;
+      });
     }
-
-    setState(() {
-      _isAnswered = true;
-      _isCorrect = isCorrect;
-    });
-
-    _endGame();
   }
 
   void _endGame() {
-    _endTimer = Timer(const Duration(seconds: 2), () {
+    _endTimer = Timer(const Duration(milliseconds: 1500), () {
       if (mounted) {
-        if (_isCorrect) {
-          ref.read(audioServiceProvider).speakInstruction("Excellent. You completed the level.");
-        }
+        ref.read(audioServiceProvider).speakInstruction("Excellent. You completed the level.");
         ref.read(gameSessionProvider.notifier).finalizeAndSaveSession(
           currentDifficulty: widget.currentDifficulty,
           gameType: 'card_recall',
@@ -285,31 +305,62 @@ class _CardRecallGameState extends ConsumerState<CardRecallGame> {
             ),
           ],
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 12),
+
+        if (_feedbackMessage != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: _isAnswered ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isAnswered ? const Color(0xFF81C784) : const Color(0xFFFFB74D),
+              ),
+            ),
+            child: Text(
+              _feedbackMessage!,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _isAnswered ? const Color(0xFF2E7D32) : const Color(0xFFE65100),
+              ),
+            ),
+          ),
+
+        const SizedBox(height: 16),
         Wrap(
           spacing: 16,
           runSpacing: 16,
           alignment: WrapAlignment.center,
           children: _options.map((option) {
             bool isSelected = _selectedCards.contains(option);
+            final isWrongSingle = _qType == 2 && _wrongOptionsChosen.contains(option);
+
             Color bgColor = Colors.white;
             Color borderColor = const Color(0xFFCAD2C5);
             
             if (_isAnswered) {
               if (_qType == 1) {
-                if (_targetCards.contains(option)) bgColor = const Color(0xFF84A98C); // Should have picked
+                if (_targetCards.contains(option)) bgColor = const Color(0xFF84A98C);
                 else bgColor = Colors.grey[300]!;
               } else {
                 if (option == _correctAnswerString) bgColor = const Color(0xFF84A98C);
                 else bgColor = Colors.grey[300]!;
               }
+            } else if (isWrongSingle) {
+              bgColor = Colors.grey.shade200;
+              borderColor = Colors.grey.shade400;
             } else if (isSelected) {
               bgColor = const Color(0xFFCAD2C5);
               borderColor = const Color(0xFF52796F);
             }
 
             return InkWell(
-              onTap: () => _onOptionSelected(option),
+              onTap: (isWrongSingle || _isAnswered || _isEvaluating)
+                  ? null
+                  : () => _onOptionSelected(option),
+              borderRadius: BorderRadius.circular(16),
               child: Container(
                 width: 90,
                 height: 120,
@@ -319,15 +370,20 @@ class _CardRecallGameState extends ConsumerState<CardRecallGame> {
                   border: Border.all(color: borderColor, width: isSelected ? 3 : 1),
                   boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
                 ),
-                child: Center(child: Text(option, style: const TextStyle(fontSize: 48))),
+                child: Center(
+                  child: Text(
+                    isWrongSingle ? "$option ✕" : option, 
+                    style: const TextStyle(fontSize: 44),
+                  ),
+                ),
               ),
             );
           }).toList(),
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: 32),
         if (!_isAnswered && _qType == 1)
           AppButton.primary(
-            text: "Submit",
+            text: "Submit Selection (${_selectedCards.length}/${_targetCards.length})",
             onPressed: _selectedCards.isNotEmpty ? _submitMultiAnswer : null,
           ),
       ],

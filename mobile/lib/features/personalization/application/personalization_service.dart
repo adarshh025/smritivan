@@ -13,7 +13,6 @@ import '../../games/domain/game_session_model.dart';
 import '../../reminders/data/reminder_repository.dart';
 import '../../reminders/domain/reminder_model.dart';
 import '../../wellbeing/data/wellbeing_repository.dart';
-import '../../wellbeing/domain/wellbeing_model.dart';
 import '../domain/personalization_models.dart';
 
 /// The engine responsible for deriving activity profiles and game recommendations

@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Team laccha paratha (SIH 2026). All rights reserved.
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,7 +34,10 @@ class _WordGardenGameState extends ConsumerState<WordGardenGame> {
   late String _correctAnswer;
   
   bool _isAnswered = false;
-  bool _isCorrect = false;
+  bool _isEvaluating = false;
+  final Set<String> _wrongAnswersChosen = {};
+  String? _feedbackMessage;
+  Timer? _completionTimer;
 
   final List<_WordItem> _contentPool = [
     _WordItem('🍎', 'APPLE', 'FRUIT', 'ORCHARD'),
@@ -61,6 +64,12 @@ class _WordGardenGameState extends ConsumerState<WordGardenGame> {
     });
   }
 
+  @override
+  void dispose() {
+    _completionTimer?.cancel();
+    super.dispose();
+  }
+
   void _generateQuestion() {
     int level = widget.currentDifficulty.floor();
     final random = Random();
@@ -70,8 +79,6 @@ class _WordGardenGameState extends ConsumerState<WordGardenGame> {
     _options = [];
 
     if (level <= 1) {
-      // Level 1: Image -> Identify object (Very Easy, basically a matching game but with words)
-      // We will show an image, and give 2 options.
       _questionPrompt = "What is this?";
       _promptWidget = Text(target.emoji, style: const TextStyle(fontSize: 80));
       _correctAnswer = target.word;
@@ -79,7 +86,6 @@ class _WordGardenGameState extends ConsumerState<WordGardenGame> {
       _options.add(_contentPool[1].word);
       _options.shuffle();
     } else if (level == 2) {
-      // Level 2: Image -> Choose from 4
       _questionPrompt = "What is this?";
       _promptWidget = Text(target.emoji, style: const TextStyle(fontSize: 80));
       _correctAnswer = target.word;
@@ -89,7 +95,6 @@ class _WordGardenGameState extends ConsumerState<WordGardenGame> {
       _options.add(_contentPool[3].word);
       _options.shuffle();
     } else if (level == 3) {
-      // Level 3: Complete simple words
       _questionPrompt = "Complete the word for:\n${target.emoji}";
       String word = target.word;
       int hideIdx = random.nextInt(word.length);
@@ -106,12 +111,10 @@ class _WordGardenGameState extends ConsumerState<WordGardenGame> {
       }
       _options.shuffle();
     } else if (level == 4) {
-      // Level 4: Category association
       _questionPrompt = "Which word belongs with these?";
       
       final categoryItems = _contentPool.where((c) => c.category == target.category).toList();
       if (categoryItems.length >= 2) {
-        // e.g. APPLE, BANANA -> ?
         _promptWidget = Column(
           children: [
             Text(categoryItems[0].word, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
@@ -124,7 +127,6 @@ class _WordGardenGameState extends ConsumerState<WordGardenGame> {
         _options.add("FOOD");
         _options.add("TOOL");
       } else {
-        // Fallback
         _promptWidget = Text(target.word, style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold));
         _correctAnswer = target.category;
         _options.add(target.category);
@@ -134,7 +136,6 @@ class _WordGardenGameState extends ConsumerState<WordGardenGame> {
       }
       _options.shuffle();
     } else {
-      // Level 5: Word association (TEA -> CUP)
       _questionPrompt = "Which word is most related?";
       _promptWidget = Text(target.word, style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, letterSpacing: 4));
       _correctAnswer = target.association;
@@ -147,7 +148,9 @@ class _WordGardenGameState extends ConsumerState<WordGardenGame> {
   }
 
   void _onOptionSelected(String option) {
-    if (_isAnswered) return;
+    if (_isAnswered || _isEvaluating || _wrongAnswersChosen.contains(option)) return;
+
+    setState(() => _isEvaluating = true);
 
     bool isCorrect = (option == _correctAnswer);
     ref.read(gameSessionProvider.notifier).recordAttempt(
@@ -158,45 +161,50 @@ class _WordGardenGameState extends ConsumerState<WordGardenGame> {
     if (isCorrect) {
       ref.read(hapticServiceProvider).success();
       ref.read(audioServiceProvider).playGentleSuccessChime();
+
+      setState(() {
+        _isAnswered = true;
+        _feedbackMessage = "✓ Correct!";
+        _isEvaluating = false;
+      });
+
+      _completionTimer = Timer(const Duration(milliseconds: 1500), () {
+        if (mounted) {
+          ref.read(audioServiceProvider).speakInstruction("Excellent. You completed the level.");
+          ref.read(gameSessionProvider.notifier).finalizeAndSaveSession(
+            currentDifficulty: widget.currentDifficulty,
+            gameType: 'word_garden',
+            ref: ref,
+          ).then((results) {
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FriendlyResultView(
+                    gameType: 'word_garden',
+                    gameTitle: 'Word Garden',
+                    gameIcon: '🌸',
+                    gameColor: const Color(0xFF2A9D8F),
+                    currentLevel: widget.currentDifficulty,
+                    results: results,
+                    gameBuilder: (lvl) => WordGardenGame(currentDifficulty: lvl),
+                  ),
+                ),
+              );
+            }
+          });
+        }
+      });
     } else {
       ref.read(hapticServiceProvider).error();
       ref.read(audioServiceProvider).playErrorChime();
+
+      setState(() {
+        _wrongAnswersChosen.add(option);
+        _feedbackMessage = "Try Again";
+        _isEvaluating = false;
+      });
     }
-
-    setState(() {
-      _isAnswered = true;
-      _isCorrect = isCorrect;
-    });
-
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        if (isCorrect) {
-          ref.read(audioServiceProvider).speakInstruction("Excellent. You completed the level.");
-        }
-        ref.read(gameSessionProvider.notifier).finalizeAndSaveSession(
-          currentDifficulty: widget.currentDifficulty,
-          gameType: 'word_garden',
-          ref: ref,
-        ).then((results) {
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => FriendlyResultView(
-                  gameType: 'word_garden',
-                  gameTitle: 'Word Garden',
-                  gameIcon: '🌸',
-                  gameColor: const Color(0xFF2A9D8F),
-                  currentLevel: widget.currentDifficulty,
-                  results: results,
-                  gameBuilder: (lvl) => WordGardenGame(currentDifficulty: lvl),
-                ),
-              ),
-            );
-          }
-        });
-      }
-    });
   }
 
   @override
@@ -226,47 +234,89 @@ class _WordGardenGameState extends ConsumerState<WordGardenGame> {
               ),
             ],
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 12),
+
+          // Gentle feedback message banner
+          if (_feedbackMessage != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: _isAnswered ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _isAnswered ? const Color(0xFF81C784) : const Color(0xFFFFB74D),
+                ),
+              ),
+              child: Text(
+                _feedbackMessage!,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _isAnswered ? const Color(0xFF2E7D32) : const Color(0xFFE65100),
+                ),
+              ),
+            ),
           
           AppCard(
-            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 60),
+            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 60),
             borderColor: const Color(0xFF52796F),
             child: _promptWidget,
           ),
           
-          const SizedBox(height: 50),
+          const SizedBox(height: 36),
           
           Wrap(
             spacing: 16,
             runSpacing: 16,
             alignment: WrapAlignment.center,
-            children: _options.map((option) => InkWell(
-              onTap: () {
-                ref.read(hapticServiceProvider).selection();
-                _onOptionSelected(option);
-              },
-              child: SizedBox(
-                width: 150,
-                child: AppCard(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  backgroundColor: _isAnswered 
-                      ? (option == _correctAnswer ? const Color(0xFF84A98C) : Colors.grey[300])
-                      : Colors.white,
-                  borderColor: _isAnswered && option == _correctAnswer ? const Color(0xFF84A98C) : const Color(0xFFCAD2C5), 
-                  child: Center(
-                    child: Text(
-                      option,
-                      style: TextStyle(
-                        fontSize: 22, 
-                        fontWeight: FontWeight.bold,
-                        color: _isAnswered && option == _correctAnswer ? Colors.white : const Color(0xFF2F3E46),
+            children: _options.map((option) {
+              final isWrong = _wrongAnswersChosen.contains(option);
+              final isTarget = _isAnswered && option == _correctAnswer;
+
+              Color bgColor = Colors.white;
+              Color borderColor = const Color(0xFFCAD2C5);
+              Color textColor = const Color(0xFF2F3E46);
+
+              if (isTarget) {
+                bgColor = const Color(0xFF84A98C);
+                borderColor = const Color(0xFF52796F);
+                textColor = Colors.white;
+              } else if (isWrong) {
+                bgColor = Colors.grey.shade200;
+                borderColor = Colors.grey.shade400;
+                textColor = Colors.grey.shade600;
+              }
+
+              return InkWell(
+                onTap: (isWrong || _isAnswered || _isEvaluating)
+                    ? null
+                    : () {
+                        ref.read(hapticServiceProvider).selection();
+                        _onOptionSelected(option);
+                      },
+                borderRadius: BorderRadius.circular(16),
+                child: SizedBox(
+                  width: 150,
+                  child: AppCard(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    backgroundColor: bgColor,
+                    borderColor: borderColor,
+                    child: Center(
+                      child: Text(
+                        isWrong ? "$option ✕" : option,
+                        style: TextStyle(
+                          fontSize: 22, 
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
-              ),
-            )).toList(),
+              );
+            }).toList(),
           ),
         ],
       ),

@@ -31,7 +31,9 @@ class _PictureRecallItem {
 class _PictureRecallGameState extends ConsumerState<PictureRecallGame> {
   bool _isObserving = true;
   bool _isAnswered = false;
-  bool _isCorrect = false;
+  bool _isEvaluating = false;
+  final Set<String> _wrongOptionsChosen = {};
+  String? _feedbackMessage;
   Timer? _observeTimer;
   Timer? _resultTimer;
 
@@ -149,7 +151,9 @@ class _PictureRecallGameState extends ConsumerState<PictureRecallGame> {
   }
 
   void _onOptionSelected(String option) {
-    if (_isAnswered) return;
+    if (_isAnswered || _isEvaluating || _wrongOptionsChosen.contains(option)) return;
+
+    setState(() => _isEvaluating = true);
 
     bool isCorrect = (option == _correctAnswer);
     ref.read(gameSessionProvider.notifier).recordAttempt(
@@ -160,45 +164,50 @@ class _PictureRecallGameState extends ConsumerState<PictureRecallGame> {
     if (isCorrect) {
       ref.read(hapticServiceProvider).success();
       ref.read(audioServiceProvider).playGentleSuccessChime();
+
+      setState(() {
+        _isAnswered = true;
+        _feedbackMessage = "✓ Correct!";
+        _isEvaluating = false;
+      });
+
+      _resultTimer = Timer(const Duration(milliseconds: 1500), () {
+        if (mounted) {
+          ref.read(audioServiceProvider).speakInstruction("Excellent. You completed the level.");
+          ref.read(gameSessionProvider.notifier).finalizeAndSaveSession(
+            currentDifficulty: widget.currentDifficulty,
+            gameType: 'picture_recall',
+            ref: ref,
+          ).then((results) {
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FriendlyResultView(
+                    gameType: 'picture_recall',
+                    gameTitle: 'Picture Recall',
+                    gameIcon: '🖼️',
+                    gameColor: const Color(0xFFE76F51),
+                    currentLevel: widget.currentDifficulty,
+                    results: results,
+                    gameBuilder: (lvl) => PictureRecallGame(currentDifficulty: lvl),
+                  ),
+                ),
+              );
+            }
+          });
+        }
+      });
     } else {
       ref.read(hapticServiceProvider).error();
       ref.read(audioServiceProvider).playErrorChime();
+
+      setState(() {
+        _wrongOptionsChosen.add(option);
+        _feedbackMessage = "Try Again";
+        _isEvaluating = false;
+      });
     }
-
-    setState(() {
-      _isAnswered = true;
-      _isCorrect = isCorrect;
-    });
-
-    _resultTimer = Timer(const Duration(seconds: 2), () {
-      if (mounted) {
-        if (isCorrect) {
-          ref.read(audioServiceProvider).speakInstruction("Excellent. You completed the level.");
-        }
-        ref.read(gameSessionProvider.notifier).finalizeAndSaveSession(
-          currentDifficulty: widget.currentDifficulty,
-          gameType: 'picture_recall',
-          ref: ref,
-        ).then((results) {
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => FriendlyResultView(
-                  gameType: 'picture_recall',
-                  gameTitle: 'Picture Recall',
-                  gameIcon: '🖼️',
-                  gameColor: const Color(0xFFE76F51),
-                  currentLevel: widget.currentDifficulty,
-                  results: results,
-                  gameBuilder: (lvl) => PictureRecallGame(currentDifficulty: lvl),
-                ),
-              ),
-            );
-          }
-        });
-      }
-    });
   }
 
   @override
@@ -283,33 +292,76 @@ class _PictureRecallGameState extends ConsumerState<PictureRecallGame> {
             ),
           ],
         ),
-        const SizedBox(height: 40),
-        ..._options.map((option) => Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
-          child: InkWell(
-            onTap: () {
-              ref.read(hapticServiceProvider).selection();
-              _onOptionSelected(option);
-            },
-            child: AppCard(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              backgroundColor: _isAnswered 
-                  ? (option == _correctAnswer ? const Color(0xFF84A98C) : Colors.grey[300])
-                  : Colors.white,
-              borderColor: _isAnswered && option == _correctAnswer ? const Color(0xFF84A98C) : const Color(0xFFCAD2C5), 
-              child: Center(
-                child: Text(
-                  option,
-                  style: TextStyle(
-                    fontSize: 20, 
-                    fontWeight: FontWeight.bold,
-                    color: _isAnswered && option == _correctAnswer ? Colors.white : const Color(0xFF2F3E46),
+        const SizedBox(height: 12),
+
+        if (_feedbackMessage != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: _isAnswered ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isAnswered ? const Color(0xFF81C784) : const Color(0xFFFFB74D),
+              ),
+            ),
+            child: Text(
+              _feedbackMessage!,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _isAnswered ? const Color(0xFF2E7D32) : const Color(0xFFE65100),
+              ),
+            ),
+          ),
+
+        const SizedBox(height: 24),
+        ..._options.map((option) {
+          final isWrong = _wrongOptionsChosen.contains(option);
+          final isTarget = _isAnswered && option == _correctAnswer;
+
+          Color bgColor = Colors.white;
+          Color borderColor = const Color(0xFFCAD2C5);
+          Color textColor = const Color(0xFF2F3E46);
+
+          if (isTarget) {
+            bgColor = const Color(0xFF84A98C);
+            borderColor = const Color(0xFF52796F);
+            textColor = Colors.white;
+          } else if (isWrong) {
+            bgColor = Colors.grey.shade200;
+            borderColor = Colors.grey.shade400;
+            textColor = Colors.grey.shade600;
+          }
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: InkWell(
+              onTap: (isWrong || _isAnswered || _isEvaluating)
+                  ? null
+                  : () {
+                      ref.read(hapticServiceProvider).selection();
+                      _onOptionSelected(option);
+                    },
+              borderRadius: BorderRadius.circular(16),
+              child: AppCard(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                backgroundColor: bgColor,
+                borderColor: borderColor,
+                child: Center(
+                  child: Text(
+                    isWrong ? "$option ✕" : option,
+                    style: TextStyle(
+                      fontSize: 20, 
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        )).toList(),
+          );
+        }).toList(),
       ],
     );
   }

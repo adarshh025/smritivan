@@ -9,7 +9,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/locale_provider.dart';
-import '../../../l10n/app_localizations.dart';
 import '../../auth_profile/domain/user_model.dart';
 import '../../auth_profile/presentation/user_provider.dart';
 import '../../auth_profile/presentation/edit_patient_profile_view.dart';
